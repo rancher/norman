@@ -2,3 +2,4 @@
 ./.dapper
 ./dist
 ./.trash-cache
+./.idea

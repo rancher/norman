@@ -1,19 +1,73 @@
-norman
+Norman
 ========
 
-A microservice that does micro things.
+An API framework for Building [Rancher Style APIs](https://github.com/rancher/api-spec/) backed by K8s CustomResources.
 
 ## Building
 
 `make`
 
+## Example
 
-## Running
+Refer to `examples/`
 
-`./bin/norman`
+```go
+package main
+
+import (
+	"context"
+	"net/http"
+
+	"fmt"
+
+	"os"
+
+	"github.com/rancher/go-rancher/v3"
+	"github.com/rancher/norman/api/crd"
+)
+
+var (
+	version = client.APIVersion{
+		Version: "v1",
+		Group:   "io.cattle.core.example",
+		Path:    "/example/v1",
+	}
+
+	Foo = client.Schema{
+		ID:      "foo",
+		Version: version,
+		ResourceFields: map[string]*client.Field{
+			"foo": {
+				Type:   "string",
+				Create: true,
+				Update: true,
+			},
+			"name": {
+				Type:     "string",
+				Create:   true,
+				Required: true,
+			},
+		},
+	}
+
+	Schemas = client.NewSchemas().
+		AddSchema(&Foo)
+)
+
+func main() {
+	server, err := crd.NewAPIServer(context.Background(), os.Getenv("KUBECONFIG"), Schemas)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Listening on 0.0.0.0:1234")
+	http.ListenAndServe("0.0.0.0:1234", server)
+}
+```
+
 
 ## License
-Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2017 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
