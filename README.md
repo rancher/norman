@@ -16,46 +16,42 @@ package main
 
 import (
 	"context"
-	"net/http"
-
 	"fmt"
-
+	"net/http"
 	"os"
 
-	"github.com/rancher/go-rancher/v3"
-	"github.com/rancher/norman/api/crd"
+	"github.com/rancher/norman/generator"
+	"github.com/rancher/norman/server"
+	"github.com/rancher/norman/types"
 )
 
+type Foo struct {
+	types.Resource
+	Name     string `json:"name"`
+	Foo      string `json:"foo"`
+	SubThing Baz    `json:"subThing"`
+}
+
+type Baz struct {
+	Name string `json:"name"`
+}
+
 var (
-	version = client.APIVersion{
+	version = types.APIVersion{
 		Version: "v1",
 		Group:   "io.cattle.core.example",
 		Path:    "/example/v1",
 	}
 
-	Foo = client.Schema{
-		ID:      "foo",
-		Version: version,
-		ResourceFields: map[string]*client.Field{
-			"foo": {
-				Type:   "string",
-				Create: true,
-				Update: true,
-			},
-			"name": {
-				Type:     "string",
-				Create:   true,
-				Required: true,
-			},
-		},
-	}
-
-	Schemas = client.NewSchemas().
-		AddSchema(&Foo)
+	Schemas = types.NewSchemas()
 )
 
 func main() {
-	server, err := crd.NewAPIServer(context.Background(), os.Getenv("KUBECONFIG"), Schemas)
+	if _, err := Schemas.Import(&version, Foo{}); err != nil {
+		panic(err)
+	}
+
+	server, err := server.NewAPIServer(context.Background(), os.Getenv("KUBECONFIG"), Schemas)
 	if err != nil {
 		panic(err)
 	}

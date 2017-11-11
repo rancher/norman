@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/rancher/norman/generator"
 	"github.com/rancher/norman/server"
 	"github.com/rancher/norman/types"
 )
@@ -34,10 +33,6 @@ var (
 
 func main() {
 	if _, err := Schemas.Import(&version, Foo{}); err != nil {
-		panic(err)
-	}
-
-	if err := generator.Generate("example_gen", Schemas); err != nil {
 		panic(err)
 	}
 
