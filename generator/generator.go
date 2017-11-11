@@ -1,24 +1,20 @@
 package generator
 
 import (
-	"k8s.io/gengo/args"
-	"k8s.io/gengo/examples/deepcopy-gen/generators"
-
+	"io/ioutil"
+	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"strings"
 	"text/template"
 
-	"net/http"
-
-	"os/exec"
-
-	"fmt"
-	"io/ioutil"
-
+	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
+	"k8s.io/gengo/args"
+	"k8s.io/gengo/examples/deepcopy-gen/generators"
 )
 
 var (
@@ -224,10 +220,9 @@ func prepareDirs(dirs ...string) error {
 
 		for _, file := range files {
 			if strings.HasPrefix(file.Name(), "zz_generated") {
-				fmt.Println("DELETING", path.Join(dir, file.Name()))
-				//if err != os.Remove(path.Join(dir, file.Name()); err != nil {
-				//	return errors.Wrapf(err, "failed to delete %s", path.Join(dir, file.Name()))
-				//}
+				if err := os.Remove(path.Join(dir, file.Name())); err != nil {
+					return errors.Wrapf(err, "failed to delete %s", path.Join(dir, file.Name()))
+				}
 			}
 		}
 	}
@@ -236,7 +231,7 @@ func prepareDirs(dirs ...string) error {
 }
 
 func gofmt(workDir, pkg string) error {
-	cmd := exec.Command("go", "fmt", "./"+pkg+"/...")
+	cmd := exec.Command("goimports", "-w", "-l", "./"+pkg)
 	cmd.Dir = workDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
