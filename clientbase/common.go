@@ -258,8 +258,8 @@ func (a *APIBaseClient) Update(schemaType string, existing *types.Resource, upda
 	return a.Ops.DoUpdate(schemaType, existing, updates, respObject)
 }
 
-func (a *APIBaseClient) ById(schemaType string, id string, respObject interface{}) error {
-	return a.Ops.DoById(schemaType, id, respObject)
+func (a *APIBaseClient) ByID(schemaType string, id string, respObject interface{}) error {
+	return a.Ops.DoByID(schemaType, id, respObject)
 }
 
 func (a *APIBaseClient) Delete(existing *types.Resource) error {

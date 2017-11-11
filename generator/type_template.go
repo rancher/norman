@@ -39,7 +39,7 @@ type {{.schema.CodeName}}Operations interface {
     List(opts *types.ListOpts) (*{{.schema.CodeName}}Collection, error)
     Create(opts *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
     Update(existing *{{.schema.CodeName}}, updates interface{}) (*{{.schema.CodeName}}, error)
-    ById(id string) (*{{.schema.CodeName}}, error)
+    ByID(id string) (*{{.schema.CodeName}}, error)
     Delete(container *{{.schema.CodeName}}) error{{range $key, $value := .resourceActions}}
     {{if eq $value.Input "" }}
         Action{{$key | capitalize}} (*{{$.schema.CodeName}}) (*{{.Output | capitalize}}, error)
@@ -83,9 +83,9 @@ func (cc *{{.schema.CodeName}}Collection) Next() (*{{.schema.CodeName}}Collectio
     return nil, nil
 }
 
-func (c *{{.schema.CodeName}}Client) ById(id string) (*{{.schema.CodeName}}, error) {
+func (c *{{.schema.CodeName}}Client) ByID(id string) (*{{.schema.CodeName}}, error) {
     resp := &{{.schema.CodeName}}{}
-    err := c.apiClient.Ops.DoById({{.schema.CodeName}}Type, id, resp)
+    err := c.apiClient.Ops.DoByID({{.schema.CodeName}}Type, id, resp)
     return resp, err
 }
 
