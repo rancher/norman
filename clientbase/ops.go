@@ -227,9 +227,7 @@ func (a *APIOperations) DoByID(schemaType string, id string, respObject interfac
 		return errors.New("Failed to find collection URL for [" + schemaType + "]")
 	}
 
-	err := a.DoGet(collectionUrl+"/"+id, nil, respObject)
-	//TODO check for 404 and return nil, nil
-	return err
+	return a.DoGet(collectionUrl+"/"+id, nil, respObject)
 }
 
 func (a *APIOperations) DoResourceDelete(schemaType string, existing *types.Resource) error {

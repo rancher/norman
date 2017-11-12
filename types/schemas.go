@@ -32,6 +32,13 @@ func (s *Schemas) Err() error {
 	return NewErrors(s.errors)
 }
 
+func (s *Schemas) AddSchemas(schema *Schemas) *Schemas {
+	for _, schema := range schema.Schemas() {
+		s.AddSchema(schema)
+	}
+	return s
+}
+
 func (s *Schemas) AddSchema(schema *Schema) *Schemas {
 	schema.Type = "schema"
 	if schema.ID == "" {

@@ -31,6 +31,12 @@ var (
 	}
 )
 
+type {{.schema.CodeName}}List struct {
+	metav1.TypeMeta   %BACK%json:",inline"%BACK%
+	metav1.ObjectMeta %BACK%json:"metadata,omitempty"%BACK%
+	Items             []{{.schema.CodeName}}
+}
+
 type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.schema.CodeName}}) error
 
 type {{.schema.CodeName}}Controller interface {

@@ -10,11 +10,15 @@ import (
 	"strings"
 	"text/template"
 
+	"io"
+
 	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
 	"k8s.io/gengo/args"
 	"k8s.io/gengo/examples/deepcopy-gen/generators"
+	"k8s.io/gengo/generator"
+	gengotypes "k8s.io/gengo/types"
 )
 
 var (
@@ -173,6 +177,8 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 		return err
 	}
 
+	doDeepCopy := false
+
 	generated := []*types.Schema{}
 	for _, schema := range schemas.Schemas() {
 		if blackListTypes[schema.ID] {
@@ -183,7 +189,10 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 			return err
 		}
 
-		if contains(schema.CollectionMethods, http.MethodGet) {
+		if contains(schema.CollectionMethods, http.MethodGet) &&
+			!strings.HasPrefix(schema.PkgName, "k8s.io") &&
+			!strings.Contains(schema.PkgName, "/vendor/") {
+			doDeepCopy = true
 			if err := generateController(k8sDir, schema, schemas); err != nil {
 				return err
 			}
@@ -196,8 +205,10 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 		return err
 	}
 
-	if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
-		return err
+	if doDeepCopy {
+		if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
+			return err
+		}
 	}
 
 	if err := gofmt(baseDir, k8sOutputPackage); err != nil {
@@ -252,5 +263,54 @@ func deepCopyGen(workDir, pkg string) error {
 	return arguments.Execute(
 		generators.NameSystems(),
 		generators.DefaultNameSystem(),
-		generators.Packages)
+		func(context *generator.Context, arguments *args.GeneratorArgs) generator.Packages {
+			packageParts := strings.Split(pkg, "/")
+			return generator.Packages{
+				&generator.DefaultPackage{
+					PackageName: packageParts[len(packageParts)-1],
+					PackagePath: pkg,
+					HeaderText:  []byte{},
+					GeneratorFunc: func(c *generator.Context) []generator.Generator {
+						return []generator.Generator{
+							&noInitGenerator{
+								generators.NewGenDeepCopy(arguments.OutputFileBaseName, pkg, nil, true, true),
+							},
+						}
+					},
+					FilterFunc: func(c *generator.Context, t *gengotypes.Type) bool {
+						if t.Name.Package != pkg {
+							return false
+						}
+
+						if isObjectOrList(t) {
+							t.SecondClosestCommentLines = append(t.SecondClosestCommentLines,
+								"+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object")
+						}
+
+						return true
+					},
+				},
+			}
+		})
+}
+
+type noInitGenerator struct {
+	generator.Generator
+}
+
+func (n *noInitGenerator) Init(*generator.Context, io.Writer) error {
+	return nil
+}
+
+func isObjectOrList(t *gengotypes.Type) bool {
+	for _, member := range t.Members {
+		if member.Embedded && (member.Name == "ObjectMeta" || member.Name == "ListMeta") {
+			return true
+		}
+		if member.Embedded && isObjectOrList(member.Type) {
+			return true
+		}
+	}
+
+	return false
 }
