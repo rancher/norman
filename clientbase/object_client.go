@@ -25,24 +25,14 @@ type ObjectClient struct {
 	Factory    ObjectFactory
 }
 
-func NewObjectClient(namespace string, config rest.Config, apiResource *metav1.APIResource, gvk schema.GroupVersionKind, factory ObjectFactory) (*ObjectClient, error) {
-	if config.NegotiatedSerializer == nil {
-		configConfig := dynamic.ContentConfig()
-		config.NegotiatedSerializer = configConfig.NegotiatedSerializer
-	}
-
-	restClient, err := rest.UnversionedRESTClientFor(&config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewObjectClient(namespace string, restClient rest.Interface, apiResource *metav1.APIResource, gvk schema.GroupVersionKind, factory ObjectFactory) *ObjectClient {
 	return &ObjectClient{
 		restClient: restClient,
 		resource:   apiResource,
 		gvk:        gvk,
 		ns:         namespace,
 		Factory:    factory,
-	}, nil
+	}
 }
 
 func (p *ObjectClient) Create(o runtime.Object) (runtime.Object, error) {

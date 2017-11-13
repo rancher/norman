@@ -37,7 +37,7 @@ type genericController struct {
 	running  bool
 }
 
-func NewGenericController(name string, objectClient *clientbase.ObjectClient) (GenericController, error) {
+func NewGenericController(name string, objectClient *clientbase.ObjectClient) GenericController {
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc:  objectClient.List,
@@ -50,7 +50,7 @@ func NewGenericController(name string, objectClient *clientbase.ObjectClient) (G
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(),
 			name),
 		name: name,
-	}, nil
+	}
 }
 
 func (g *genericController) Informer() cache.SharedIndexInformer {

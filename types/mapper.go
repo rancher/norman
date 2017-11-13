@@ -48,7 +48,7 @@ func (t *TypeMapper) FromInternal(data map[string]interface{}) {
 }
 
 func (t *TypeMapper) ToInternal(data map[string]interface{}) {
-	for i := len(t.Mappers) - 1; i <= 0; i-- {
+	for i := len(t.Mappers) - 1; i >= 0; i-- {
 		t.Mappers[i].ToInternal(data)
 	}
 

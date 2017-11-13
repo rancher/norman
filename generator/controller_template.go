@@ -54,7 +54,7 @@ type {{.schema.CodeName}}Interface interface {
 	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Controller() ({{.schema.CodeName}}Controller, error)
+	Controller() {{.schema.CodeName}}Controller
 }
 
 type {{.schema.ID}}Controller struct {
@@ -85,35 +85,30 @@ func (c {{.schema.ID}}Factory) List() runtime.Object {
 	return &{{.schema.CodeName}}List{}
 }
 
-func New{{.schema.CodeName}}Client(namespace string, config rest.Config) ({{.schema.CodeName}}Interface, error) {
-	objectClient, err := clientbase.NewObjectClient(namespace, config, &{{.schema.CodeName}}Resource, {{.schema.CodeName}}GroupVersionKind, {{.schema.ID}}Factory{})
-	return &{{.schema.ID}}Client{
-		objectClient: objectClient,
-	}, err
-}
+func (s *{{.schema.ID}}Client) Controller() {{.schema.CodeName}}Controller {
+	s.client.Lock()
+	defer s.client.Unlock()
 
-func (s *{{.schema.ID}}Client) Controller() ({{.schema.CodeName}}Controller, error) {
-	s.Lock()
-	defer s.Unlock()
-
-	if s.controller != nil {
-		return s.controller, nil
+	c, ok := s.client.{{.schema.ID}}Controllers[s.ns]
+	if ok {
+		return c
 	}
 
-	controller, err := controller.NewGenericController({{.schema.CodeName}}GroupVersionKind.Kind+"Controller",
+	genericController := controller.NewGenericController({{.schema.CodeName}}GroupVersionKind.Kind+"Controller",
 		s.objectClient)
-	if err != nil {
-		return nil, err
+
+	c = &{{.schema.ID}}Controller{
+		GenericController: genericController,
 	}
 
-	s.controller = &{{.schema.ID}}Controller{
-		GenericController: controller,
-	}
-	return s.controller, nil
+	s.client.{{.schema.ID}}Controllers[s.ns] = c
+
+	return c
 }
 
 type {{.schema.ID}}Client struct {
-	sync.Mutex
+	client *Client
+	ns string
 	objectClient *clientbase.ObjectClient
 	controller   {{.schema.CodeName}}Controller
 }

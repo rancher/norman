@@ -55,6 +55,9 @@ func (s *Schemas) AddSchema(schema *Schema) *Schemas {
 	if schema.CodeName == "" {
 		schema.CodeName = convert.Capitalize(schema.ID)
 	}
+	if schema.CodeNamePlural == "" {
+		schema.CodeNamePlural = name.GuessPluralName(schema.CodeName)
+	}
 
 	schemas, ok := s.schemasByPath[schema.Version.Path]
 	if !ok {

@@ -61,13 +61,22 @@ func (c *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id stri
 		return nil, err
 	}
 
-	c.back(result.Object, schema)
+	c.fromInternal(result.Object, schema)
 
 	return result.Object, nil
 }
 
-func (c *Store) back(data map[string]interface{}, schema *types.Schema) {
-	//mapping.Metadata.Back(data)
+func (c *Store) toInternal(data map[string]interface{}, schema *types.Schema) {
+	if schema.Mapper != nil {
+		schema.Mapper.ToInternal(data)
+	}
+}
+
+func (c *Store) fromInternal(data map[string]interface{}, schema *types.Schema) {
+	if schema.Mapper != nil {
+		schema.Mapper.FromInternal(data)
+	}
+
 	data["type"] = schema.ID
 	name, _ := data["name"].(string)
 	namespace, _ := data["namespace"].(string)
@@ -77,6 +86,12 @@ func (c *Store) back(data map[string]interface{}, schema *types.Schema) {
 			data["id"] = name
 		} else {
 			data["id"] = namespace + ":" + name
+		}
+	}
+
+	if status, ok := c.schemaStatus[schema]; ok {
+		if status.Spec.Scope != apiext.NamespaceScoped {
+			delete(data, "namespace")
 		}
 	}
 }
@@ -131,7 +146,7 @@ func (c *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 	result := []map[string]interface{}{}
 
 	for _, obj := range resultList.Items {
-		c.back(obj.Object, schema)
+		c.fromInternal(obj.Object, schema)
 		result = append(result, obj.Object)
 	}
 
@@ -167,13 +182,16 @@ func (c *Store) Update(apiContext *types.APIContext, schema *types.Schema, data 
 		return nil, err
 	}
 
-	//mapping.Metadata.Forward(data)
+	c.fromInternal(result.Object, schema)
+
 	for k, v := range data {
 		if k == "metadata" {
 			continue
 		}
 		result.Object[k] = v
 	}
+
+	c.toInternal(result.Object, schema)
 
 	req = c.k8sClient.Put().
 		Prefix("apis", crd.Spec.Group, crd.Spec.Version).
@@ -191,7 +209,7 @@ func (c *Store) Update(apiContext *types.APIContext, schema *types.Schema, data 
 		return nil, err
 	}
 
-	c.back(result.Object, schema)
+	c.fromInternal(result.Object, schema)
 	return result.Object, nil
 }
 
@@ -207,6 +225,8 @@ func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 
 	data["apiVersion"] = crd.Spec.Group + "/" + crd.Spec.Version
 	data["kind"] = crd.Status.AcceptedNames.Kind
+
+	c.toInternal(data, schema)
 
 	req := c.k8sClient.Post().
 		Prefix("apis", crd.Spec.Group, crd.Spec.Version).
@@ -225,7 +245,7 @@ func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 		return nil, err
 	}
 
-	c.back(result.Object, schema)
+	c.fromInternal(result.Object, schema)
 	return result.Object, nil
 }
 
