@@ -12,13 +12,15 @@ type Move struct {
 }
 
 func (m Move) FromInternal(data map[string]interface{}) {
-	if v, ok := GetValue(data, m.From); ok {
+	if v, ok := data[m.From]; ok {
+		delete(data, m.From)
 		data[m.To] = v
 	}
 }
 
 func (m Move) ToInternal(data map[string]interface{}) {
-	if v, ok := GetValue(data, m.To); ok {
+	if v, ok := data[m.To]; ok {
+		delete(data, m.To)
 		data[m.From] = v
 	}
 }

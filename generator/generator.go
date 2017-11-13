@@ -149,6 +149,27 @@ func generateController(outputDir string, schema *types.Schema, schemas *types.S
 	})
 }
 
+func generateK8sClient(outputDir string, version *types.APIVersion, schemas []*types.Schema) error {
+	filePath := strings.ToLower("zz_generated_k8s_client.go")
+	output, err := os.Create(path.Join(outputDir, filePath))
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	typeTemplate, err := template.New("k8sClient.template").
+		Funcs(funcs()).
+		Parse(strings.Replace(k8sClientTemplate, "%BACK%", "`", -1))
+	if err != nil {
+		return err
+	}
+
+	return typeTemplate.Execute(output, map[string]interface{}{
+		"version": version,
+		"schemas": schemas,
+	})
+}
+
 func generateClient(outputDir string, schemas []*types.Schema) error {
 	template, err := template.New("client.template").
 		Funcs(funcs()).
@@ -177,7 +198,7 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 		return err
 	}
 
-	doDeepCopy := false
+	controllers := []*types.Schema{}
 
 	generated := []*types.Schema{}
 	for _, schema := range schemas.Schemas() {
@@ -192,7 +213,7 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 		if contains(schema.CollectionMethods, http.MethodGet) &&
 			!strings.HasPrefix(schema.PkgName, "k8s.io") &&
 			!strings.Contains(schema.PkgName, "/vendor/") {
-			doDeepCopy = true
+			controllers = append(controllers, schema)
 			if err := generateController(k8sDir, schema, schemas); err != nil {
 				return err
 			}
@@ -205,10 +226,12 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 		return err
 	}
 
-	if doDeepCopy {
+	if len(controllers) > 0 {
 		if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
 			return err
 		}
+
+		generateK8sClient(k8sDir, &controllers[0].Version, controllers)
 	}
 
 	if err := gofmt(baseDir, k8sOutputPackage); err != nil {
