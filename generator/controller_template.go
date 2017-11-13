@@ -33,7 +33,7 @@ var (
 
 type {{.schema.CodeName}}List struct {
 	metav1.TypeMeta   %BACK%json:",inline"%BACK%
-	metav1.ObjectMeta %BACK%json:"metadata,omitempty"%BACK%
+	metav1.ListMeta   %BACK%json:"metadata,omitempty"%BACK%
 	Items             []{{.schema.CodeName}}
 }
 
