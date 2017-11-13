@@ -138,10 +138,6 @@ func generateController(outputDir string, schema *types.Schema, schemas *types.S
 		return err
 	}
 
-	if schema.InternalSchema != nil {
-		schema = schema.InternalSchema
-	}
-
 	return typeTemplate.Execute(output, map[string]interface{}{
 		"schema":          schema,
 		"structFields":    getTypeMap(schema, schemas),
