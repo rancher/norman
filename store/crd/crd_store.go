@@ -221,8 +221,6 @@ func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 
 	namespace, _ := data["namespace"].(string)
 
-	//mapping.Metadata.Forward(data)
-
 	data["apiVersion"] = crd.Spec.Group + "/" + crd.Spec.Version
 	data["kind"] = crd.Status.AcceptedNames.Kind
 
@@ -230,10 +228,10 @@ func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 
 	req := c.k8sClient.Post().
 		Prefix("apis", crd.Spec.Group, crd.Spec.Version).
+		Resource(crd.Status.AcceptedNames.Plural).
 		Body(&unstructured.Unstructured{
 			Object: data,
-		}).
-		Resource(crd.Status.AcceptedNames.Plural)
+		})
 
 	if crd.Spec.Scope == apiext.NamespaceScoped {
 		req.Namespace(namespace)
@@ -352,7 +350,8 @@ func (c *Store) createCRD(schema *types.Schema, ready map[string]apiext.CustomRe
 		Spec: apiext.CustomResourceDefinitionSpec{
 			Group:   schema.Version.Group,
 			Version: schema.Version.Version,
-			Scope:   getScope(schema),
+			//Scope:   getScope(schema),
+			Scope: apiext.ClusterScoped,
 			Names: apiext.CustomResourceDefinitionNames{
 				Plural: plural,
 				Kind:   capitalize(schema.ID),
