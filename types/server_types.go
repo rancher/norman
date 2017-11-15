@@ -32,7 +32,7 @@ func (r *RawResource) MarshalJSON() ([]byte, error) {
 	if r.ActionLinks {
 		data["actionLinks"] = r.Actions
 	} else {
-		data["action"] = r.Actions
+		data["actions"] = r.Actions
 	}
 	return json.Marshal(data)
 }
