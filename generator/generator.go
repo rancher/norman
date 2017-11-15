@@ -55,6 +55,10 @@ func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas
 		name = "float64"
 	case "int":
 		name = "int64"
+	case "multiline":
+		return "string"
+	case "masked":
+		return "string"
 	case "password":
 		return "string"
 	case "date":

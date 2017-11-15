@@ -13,6 +13,8 @@ type SchemaCollection struct {
 	Data []Schema
 }
 
+type SchemaInitFunc func(*Schemas) *Schemas
+
 type Schemas struct {
 	schemasByPath map[string]map[string]*Schema
 	mappers       map[string]map[string]Mapper
@@ -26,6 +28,10 @@ func NewSchemas() *Schemas {
 		schemasByPath: map[string]map[string]*Schema{},
 		mappers:       map[string]map[string]Mapper{},
 	}
+}
+
+func (s *Schemas) Init(initFunc SchemaInitFunc) *Schemas {
+	return initFunc(s)
 }
 
 func (s *Schemas) Err() error {

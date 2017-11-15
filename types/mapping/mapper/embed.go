@@ -8,6 +8,7 @@ import (
 
 type Embed struct {
 	Field          string
+	ReadOnly       bool
 	ignoreOverride bool
 	embeddedFields []string
 }
@@ -55,6 +56,10 @@ func (e *Embed) ModifySchema(schema *types.Schema, schemas *types.Schemas) error
 				return fmt.Errorf("embedding field %s on %s will overwrite the field %s",
 					e.Field, schema.ID, name)
 			}
+		}
+		if e.ReadOnly {
+			field.Create = false
+			field.Update = false
 		}
 		schema.ResourceFields[name] = field
 		e.embeddedFields = append(e.embeddedFields, name)

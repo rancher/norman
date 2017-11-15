@@ -13,6 +13,7 @@ import (
 
 var (
 	resourceType   = reflect.TypeOf(Resource{})
+	typeType       = reflect.TypeOf(metav1.TypeMeta{})
 	metaType       = reflect.TypeOf(metav1.ObjectMeta{})
 	blacklistNames = map[string]bool{
 		"links":   true,
@@ -114,6 +115,9 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
 	}
 
+	hasType := false
+	hasMeta := false
+
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
@@ -126,6 +130,14 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 
 		if jsonName == "-" {
 			continue
+		}
+
+		if field.Anonymous && jsonName == "" && field.Type == typeType {
+			hasType = true
+		}
+
+		if field.Anonymous && jsonName == "metadata" && field.Type == metaType {
+			hasMeta = true
 		}
 
 		if field.Anonymous && jsonName == "" {
@@ -177,13 +189,13 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 			schemaField.Type = inferedType
 		}
 
-		if field.Type == metaType {
-			schema.CollectionMethods = []string{"GET", "POST"}
-			schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
-		}
-
 		logrus.Debugf("Setting field %s.%s: %#v", schema.ID, fieldName, schemaField)
 		schema.ResourceFields[fieldName] = schemaField
+	}
+
+	if hasType && hasMeta {
+		schema.CollectionMethods = []string{"GET", "POST"}
+		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
 	}
 
 	return nil
