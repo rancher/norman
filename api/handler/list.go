@@ -1,4 +1,4 @@
-package handlers
+package handler
 
 import (
 	"net/http"
@@ -19,8 +19,8 @@ func ListHandler(request *types.APIContext) error {
 	}
 
 	if request.ID == "" {
-		request.QueryOptions = parse.QueryOptions(request.Request, request.Schema)
-		data, err = store.List(request, request.Schema, request.QueryOptions)
+		opts := parse.QueryOptions(request, request.Schema)
+		data, err = store.List(request, request.Schema, opts)
 	} else if request.Link == "" {
 		data, err = store.ByID(request, request.Schema, request.ID)
 	} else {

@@ -12,23 +12,23 @@ import (
 )
 
 const (
-	DEFAULT_OVERRIDE_URL_HEADER = "X-API-request-url"
-	FORWARDED_HOST_HEADER       = "X-Forwarded-Host"
-	FORWARDED_PROTO_HEADER      = "X-Forwarded-Proto"
-	FORWARDED_PORT_HEADER       = "X-Forwarded-Port"
+	DefaultOverrideURLHeader = "X-API-request-url"
+	ForwardedHostHeader      = "X-Forwarded-Host"
+	ForwardedProtoHeader     = "X-Forwarded-Proto"
+	ForwardedPortHeader      = "X-Forwarded-Port"
 )
 
 func New(r *http.Request, version types.APIVersion, schemas *types.Schemas) (types.URLBuilder, error) {
-	requestUrl := parseRequestUrl(r)
-	responseUrlBase, err := parseResponseUrlBase(requestUrl, r)
+	requestURL := parseRequestURL(r)
+	responseURLBase, err := parseResponseURLBase(requestURL, r)
 	if err != nil {
 		return nil, err
 	}
 
 	builder := &urlBuilder{
 		schemas:         schemas,
-		requestUrl:      requestUrl,
-		responseUrlBase: responseUrlBase,
+		requestURL:      requestURL,
+		responseURLBase: responseURLBase,
 		apiVersion:      version,
 		query:           r.URL.Query(),
 	}
@@ -38,8 +38,8 @@ func New(r *http.Request, version types.APIVersion, schemas *types.Schemas) (typ
 
 type urlBuilder struct {
 	schemas         *types.Schemas
-	requestUrl      string
-	responseUrlBase string
+	requestURL      string
+	responseURLBase string
 	apiVersion      types.APIVersion
 	subContext      string
 	query           url.Values
@@ -49,12 +49,25 @@ func (u *urlBuilder) SetSubContext(subContext string) {
 	u.subContext = subContext
 }
 
+func (u *urlBuilder) SchemaLink(schema *types.Schema) string {
+	return u.constructBasicURL(schema.Version, "schemas", schema.ID)
+}
+
 func (u *urlBuilder) ResourceLink(resource *types.RawResource) string {
 	if resource.ID == "" {
 		return ""
 	}
 
-	return u.constructBasicUrl(resource.Schema.Version, resource.Schema.PluralName, resource.ID)
+	return u.constructBasicURL(resource.Schema.Version, resource.Schema.PluralName, resource.ID)
+}
+
+func (u *urlBuilder) Marker(marker string) string {
+	newValues := url.Values{}
+	for k, v := range u.query {
+		newValues[k] = v
+	}
+	newValues.Set("marker", marker)
+	return u.requestURL + "?" + newValues.Encode()
 }
 
 func (u *urlBuilder) ReverseSort(order types.SortOrder) string {
@@ -70,30 +83,48 @@ func (u *urlBuilder) ReverseSort(order types.SortOrder) string {
 		newValues.Add("order", string(types.ASC))
 	}
 
-	return u.requestUrl + "?" + newValues.Encode()
+	return u.requestURL + "?" + newValues.Encode()
 }
 
 func (u *urlBuilder) Current() string {
-	return u.requestUrl
+	return u.requestURL
 }
 
 func (u *urlBuilder) RelativeToRoot(path string) string {
-	return u.responseUrlBase + path
+	return u.responseURLBase + path
 }
 
-func (u *urlBuilder) Collection(schema *types.Schema) string {
+func (u *urlBuilder) Sort(field string) string {
+	newValues := url.Values{}
+	for k, v := range u.query {
+		newValues[k] = v
+	}
+	newValues.Del("order")
+	newValues.Del("marker")
+	newValues.Set("sort", field)
+	return u.requestURL + "?" + newValues.Encode()
+}
+
+func (u *urlBuilder) Collection(schema *types.Schema, versionOverride *types.APIVersion) string {
 	plural := u.getPluralName(schema)
-	return u.constructBasicUrl(schema.Version, plural)
+	if versionOverride == nil {
+		return u.constructBasicURL(schema.Version, plural)
+	}
+	return u.constructBasicURL(*versionOverride, plural)
 }
 
-func (u *urlBuilder) Version(version string) string {
-	return fmt.Sprintf("%s/%s", u.responseUrlBase, version)
+func (u *urlBuilder) SubContextCollection(subContext *types.Schema, contextName string, schema *types.Schema) string {
+	return u.constructBasicURL(schema.Version, subContext.SubContext, contextName, u.getPluralName(schema))
 }
 
-func (u *urlBuilder) constructBasicUrl(version types.APIVersion, parts ...string) string {
+func (u *urlBuilder) Version(version types.APIVersion) string {
+	return u.constructBasicURL(version)
+}
+
+func (u *urlBuilder) constructBasicURL(version types.APIVersion, parts ...string) string {
 	buffer := bytes.Buffer{}
 
-	buffer.WriteString(u.responseUrlBase)
+	buffer.WriteString(u.responseURLBase)
 	if version.Path == "" {
 		buffer.WriteString(u.apiVersion.Path)
 	} else {
@@ -130,30 +161,30 @@ func (u *urlBuilder) getPluralName(schema *types.Schema) string {
 // Additional notes:
 //  - With x-api-request-url, the query string is passed, it will be dropped to match the other formats.
 //  - If the x-forwarded-host/host header has a port and x-forwarded-port has been passed, x-forwarded-port will be used.
-func parseRequestUrl(r *http.Request) string {
+func parseRequestURL(r *http.Request) string {
 	// Get url from custom x-api-request-url header
-	requestUrl := getOverrideHeader(r, DEFAULT_OVERRIDE_URL_HEADER, "")
-	if requestUrl != "" {
-		return strings.SplitN(requestUrl, "?", 2)[0]
+	requestURL := getOverrideHeader(r, DefaultOverrideURLHeader, "")
+	if requestURL != "" {
+		return strings.SplitN(requestURL, "?", 2)[0]
 	}
 
 	// Get url from standard headers
-	requestUrl = getUrlFromStandardHeaders(r)
-	if requestUrl != "" {
-		return requestUrl
+	requestURL = getURLFromStandardHeaders(r)
+	if requestURL != "" {
+		return requestURL
 	}
 
 	// Use incoming url
 	return fmt.Sprintf("http://%s%s", r.Host, r.URL.Path)
 }
 
-func getUrlFromStandardHeaders(r *http.Request) string {
-	xForwardedProto := getOverrideHeader(r, FORWARDED_PROTO_HEADER, "")
+func getURLFromStandardHeaders(r *http.Request) string {
+	xForwardedProto := getOverrideHeader(r, ForwardedProtoHeader, "")
 	if xForwardedProto == "" {
 		return ""
 	}
 
-	host := getOverrideHeader(r, FORWARDED_HOST_HEADER, "")
+	host := getOverrideHeader(r, ForwardedHostHeader, "")
 	if host == "" {
 		host = r.Host
 	}
@@ -162,7 +193,7 @@ func getUrlFromStandardHeaders(r *http.Request) string {
 		return ""
 	}
 
-	port := getOverrideHeader(r, FORWARDED_PORT_HEADER, "")
+	port := getOverrideHeader(r, ForwardedPortHeader, "")
 	if port == "443" || port == "80" {
 		port = "" // Don't include default ports in url
 	}
@@ -190,13 +221,13 @@ func getOverrideHeader(r *http.Request, header string, defaultValue string) stri
 	return defaultValue
 }
 
-func parseResponseUrlBase(requestUrl string, r *http.Request) (string, error) {
+func parseResponseURLBase(requestURL string, r *http.Request) (string, error) {
 	path := r.URL.Path
 
-	index := strings.LastIndex(requestUrl, path)
+	index := strings.LastIndex(requestURL, path)
 	if index == -1 {
-		// Fallback, if we can't find path in requestUrl, then we just assume the base is the root of the web request
-		u, err := url.Parse(requestUrl)
+		// Fallback, if we can't find path in requestURL, then we just assume the base is the root of the web request
+		u, err := url.Parse(requestURL)
 		if err != nil {
 			return "", err
 		}
@@ -206,7 +237,7 @@ func parseResponseUrlBase(requestUrl string, r *http.Request) (string, error) {
 		buffer.WriteString("://")
 		buffer.WriteString(u.Host)
 		return buffer.String(), nil
-	} else {
-		return requestUrl[0:index], nil
 	}
+
+	return requestURL[0:index], nil
 }

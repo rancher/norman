@@ -5,28 +5,28 @@ import (
 )
 
 var (
-	INVALID_DATE_FORMAT  = ErrorCode{"InvalidDateFormat", 422}
-	INVALID_FORMAT       = ErrorCode{"InvalidFormat", 422}
-	INVALID_REFERENCE    = ErrorCode{"InvalidReference", 422}
-	NOT_NULLABLE         = ErrorCode{"NotNullable", 422}
-	NOT_UNIQUE           = ErrorCode{"NotUnique", 422}
-	MIN_LIMIT_EXCEEDED   = ErrorCode{"MinLimitExceeded", 422}
-	MAX_LIMIT_EXCEEDED   = ErrorCode{"MaxLimitExceeded", 422}
-	MIN_LENGTH_EXCEEDED  = ErrorCode{"MinLengthExceeded", 422}
-	MAX_LENGTH_EXCEEDED  = ErrorCode{"MaxLengthExceeded", 422}
-	INVALID_OPTION       = ErrorCode{"InvalidOption", 422}
-	INVALID_CHARACTERS   = ErrorCode{"InvalidCharacters", 422}
-	MISSING_REQUIRED     = ErrorCode{"MissingRequired", 422}
-	INVALID_CSRF_TOKEN   = ErrorCode{"InvalidCSRFToken", 422}
-	INVALID_ACTION       = ErrorCode{"InvalidAction", 422}
-	INVALID_BODY_CONTENT = ErrorCode{"InvalidBodyContent", 422}
-	INVALID_TYPE         = ErrorCode{"InvalidType", 422}
-	ACTION_NOT_AVAILABLE = ErrorCode{"ActionNotAvailable", 404}
-	INVALID_STATE        = ErrorCode{"InvalidState", 422}
-	SERVER_ERROR         = ErrorCode{"ServerError", 500}
+	InvalidDateFormat  = ErrorCode{"InvalidDateFormat", 422}
+	InvalidFormat      = ErrorCode{"InvalidFormat", 422}
+	InvalidReference   = ErrorCode{"InvalidReference", 422}
+	NotNullable        = ErrorCode{"NotNullable", 422}
+	NotUnique          = ErrorCode{"NotUnique", 422}
+	MinLimitExceeded   = ErrorCode{"MinLimitExceeded", 422}
+	MaxLimitExceeded   = ErrorCode{"MaxLimitExceeded", 422}
+	MinLengthExceeded  = ErrorCode{"MinLengthExceeded", 422}
+	MaxLengthExceeded  = ErrorCode{"MaxLengthExceeded", 422}
+	InvalidOption      = ErrorCode{"InvalidOption", 422}
+	InvalidCharacters  = ErrorCode{"InvalidCharacters", 422}
+	MissingRequired    = ErrorCode{"MissingRequired", 422}
+	InvalidCSRFToken   = ErrorCode{"InvalidCSRFToken", 422}
+	InvalidAction      = ErrorCode{"InvalidAction", 422}
+	InvalidBodyContent = ErrorCode{"InvalidBodyContent", 422}
+	InvalidType        = ErrorCode{"InvalidType", 422}
+	ActionNotAvailable = ErrorCode{"ActionNotAvailable", 404}
+	InvalidState       = ErrorCode{"InvalidState", 422}
+	ServerError        = ErrorCode{"ServerError", 500}
 
-	METHOD_NOT_ALLOWED = ErrorCode{"MethodNotAllow", 405}
-	NOT_FOUND          = ErrorCode{"NotFound", 404}
+	MethodNotAllowed = ErrorCode{"MethodNotAllow", 405}
+	NotFound         = ErrorCode{"NotFound", 404}
 )
 
 type ErrorCode struct {

@@ -11,7 +11,7 @@ import (
 const (
     {{.schema.CodeName}}Type = "{{.schema.ID}}"
 {{- range $key, $value := .structFields}}
-	{{$.schema.CodeName}}Field{{$key}} = "{{$key | toLowerCamelCase }}"
+	{{$.schema.CodeName}}Field{{$key}} = "{{$value.Name}}"
 {{- end}}
 )
 
@@ -20,7 +20,7 @@ type {{.schema.CodeName}} struct {
     types.Resource
 {{- end}}
     {{- range $key, $value := .structFields}}
-        {{$key}} {{$value}} %BACK%json:"{{$key | toLowerCamelCase }},omitempty"%BACK%
+        {{$key}} {{$value.Type}} %BACK%json:"{{$value.Name}},omitempty"%BACK%
     {{- end}}
 }
 

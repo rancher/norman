@@ -18,11 +18,6 @@ func (d Drop) ToInternal(data map[string]interface{}) {
 }
 
 func (d Drop) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
-	_, err := getInternal(schema)
-	if err != nil {
-		return err
-	}
-
 	if _, ok := schema.ResourceFields[d.Field]; !ok {
 		return fmt.Errorf("can not drop missing field %s on %s", d.Field, schema.ID)
 	}

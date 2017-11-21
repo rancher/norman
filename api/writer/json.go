@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rancher/norman/parse"
 	"github.com/rancher/norman/parse/builder"
 	"github.com/rancher/norman/types"
 	"github.com/sirupsen/logrus"
@@ -130,19 +131,47 @@ func newCollection(apiContext *types.APIContext) *types.GenericCollection {
 
 	if apiContext.Method == http.MethodGet {
 		if apiContext.AccessControl.CanCreate(apiContext.Schema) {
-			result.CreateTypes[apiContext.Schema.ID] = apiContext.URLBuilder.Collection(apiContext.Schema)
+			result.CreateTypes[apiContext.Schema.ID] = apiContext.URLBuilder.Collection(apiContext.Schema, apiContext.Version)
 		}
 	}
 
-	if apiContext.QueryOptions != nil {
-		result.Sort = &apiContext.QueryOptions.Sort
-		result.Sort.Reverse = apiContext.URLBuilder.ReverseSort(result.Sort.Order)
-		result.Pagination = apiContext.QueryOptions.Pagination
-		result.Filters = map[string][]types.Condition{}
+	opts := parse.QueryOptions(apiContext, apiContext.Schema)
+	result.Sort = &opts.Sort
+	result.Sort.Reverse = apiContext.URLBuilder.ReverseSort(result.Sort.Order)
+	result.Sort.Links = map[string]string{}
+	result.Pagination = opts.Pagination
+	result.Filters = map[string][]types.Condition{}
 
-		for _, cond := range apiContext.QueryOptions.Conditions {
-			filters := result.Filters[cond.Field]
-			result.Filters[cond.Field] = append(filters, cond.ToCondition())
+	for _, cond := range opts.Conditions {
+		filters := result.Filters[cond.Field]
+		result.Filters[cond.Field] = append(filters, cond.ToCondition())
+	}
+
+	for name := range apiContext.Schema.CollectionFilters {
+		if _, ok := result.Filters[name]; !ok {
+			result.Filters[name] = nil
+		}
+	}
+
+	for queryField := range apiContext.Schema.CollectionFilters {
+		field, ok := apiContext.Schema.ResourceFields[queryField]
+		if ok && (field.Type == "string" || field.Type == "enum") {
+			result.Sort.Links[queryField] = apiContext.URLBuilder.Sort(queryField)
+		}
+	}
+
+	if result.Pagination.Partial {
+		if result.Pagination.Next != "" {
+			result.Pagination.Next = apiContext.URLBuilder.Marker(result.Pagination.Next)
+		}
+		if result.Pagination.Previous != "" {
+			result.Pagination.Previous = apiContext.URLBuilder.Marker(result.Pagination.Previous)
+		}
+		if result.Pagination.First != "" {
+			result.Pagination.First = apiContext.URLBuilder.Marker(result.Pagination.First)
+		}
+		if result.Pagination.Last != "" {
+			result.Pagination.Last = apiContext.URLBuilder.Marker(result.Pagination.Last)
 		}
 	}
 

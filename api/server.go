@@ -1,27 +1,35 @@
 package api
 
 import (
-	"context"
 	"net/http"
 
+	"sync"
+
 	"github.com/rancher/norman/api/builtin"
-	"github.com/rancher/norman/api/handlers"
+	"github.com/rancher/norman/api/handler"
 	"github.com/rancher/norman/api/writer"
 	"github.com/rancher/norman/authorization"
 	"github.com/rancher/norman/httperror"
 	"github.com/rancher/norman/parse"
-	"github.com/rancher/norman/parse/builder"
+	"github.com/rancher/norman/store/wrapper"
 	"github.com/rancher/norman/types"
 )
+
+type StoreWrapper func(types.Store) types.Store
 
 type Parser func(rw http.ResponseWriter, req *http.Request) (*types.APIContext, error)
 
 type Server struct {
-	IgnoreBuiltin   bool
-	Parser          Parser
-	ResponseWriters map[string]ResponseWriter
-	schemas         *types.Schemas
-	Defaults        Defaults
+	initBuiltin                 sync.Once
+	IgnoreBuiltin               bool
+	Parser                      Parser
+	Resolver                    parse.ResolverFunc
+	SubContextAttributeProvider types.SubContextAttributeProvider
+	ResponseWriters             map[string]ResponseWriter
+	schemas                     *types.Schemas
+	QueryFilter                 types.QueryFilter
+	StoreWrapper                StoreWrapper
+	Defaults                    Defaults
 }
 
 type Defaults struct {
@@ -42,41 +50,60 @@ func NewAPIServer() *Server {
 			"json": &writer.JSONResponseWriter{},
 			"html": &writer.HTMLResponseWriter{},
 		},
+		SubContextAttributeProvider: &parse.DefaultSubContextAttributeProvider{},
+		Resolver:                    parse.DefaultResolver,
 		Defaults: Defaults{
-			CreateHandler: handlers.CreateHandler,
-			DeleteHandler: handlers.DeleteHandler,
-			UpdateHandler: handlers.UpdateHandler,
-			ListHandler:   handlers.ListHandler,
+			CreateHandler: handler.CreateHandler,
+			DeleteHandler: handler.DeleteHandler,
+			UpdateHandler: handler.UpdateHandler,
+			ListHandler:   handler.ListHandler,
 			LinkHandler: func(*types.APIContext) error {
-				return httperror.NewAPIError(httperror.NOT_FOUND, "Link not found")
+				return httperror.NewAPIError(httperror.NotFound, "Link not found")
 			},
 			ErrorHandler: httperror.ErrorHandler,
 		},
+		StoreWrapper: wrapper.Wrap,
+		QueryFilter:  handler.QueryFilter,
 	}
 
-	s.Parser = func(rw http.ResponseWriter, req *http.Request) (*types.APIContext, error) {
-		ctx, err := parse.Parse(rw, req, s.schemas)
-		ctx.ResponseWriter = s.ResponseWriters[ctx.ResponseFormat]
-		if ctx.ResponseWriter == nil {
-			ctx.ResponseWriter = s.ResponseWriters["json"]
-		}
-
-		ctx.AccessControl = &authorization.AllAccess{}
-
-		return ctx, err
-	}
-
+	s.Parser = s.parser
 	return s
 }
 
-func (s *Server) Start(ctx context.Context) error {
-	return s.addBuiltins(ctx)
+func (s *Server) parser(rw http.ResponseWriter, req *http.Request) (*types.APIContext, error) {
+	ctx, err := parse.Parse(rw, req, s.schemas, s.Resolver)
+	ctx.ResponseWriter = s.ResponseWriters[ctx.ResponseFormat]
+	if ctx.ResponseWriter == nil {
+		ctx.ResponseWriter = s.ResponseWriters["json"]
+	}
+
+	if ctx.QueryFilter == nil {
+		ctx.QueryFilter = s.QueryFilter
+	}
+
+	if ctx.SubContextAttributeProvider == nil {
+		ctx.SubContextAttributeProvider = s.SubContextAttributeProvider
+	}
+
+	ctx.AccessControl = &authorization.AllAccess{}
+
+	return ctx, err
 }
 
 func (s *Server) AddSchemas(schemas *types.Schemas) error {
 	if schemas.Err() != nil {
 		return schemas.Err()
 	}
+
+	s.initBuiltin.Do(func() {
+		if s.IgnoreBuiltin {
+			return
+		}
+		for _, schema := range builtin.Schemas.Schemas() {
+			s.setupDefaults(schema)
+			s.schemas.AddSchema(schema)
+		}
+	})
 
 	for _, schema := range schemas.Schemas() {
 		s.setupDefaults(schema)
@@ -118,6 +145,10 @@ func (s *Server) setupDefaults(schema *types.Schema) {
 	if schema.ErrorHandler == nil {
 		schema.ErrorHandler = s.Defaults.ErrorHandler
 	}
+
+	if schema.Store != nil && s.StoreWrapper != nil {
+		schema.Store = s.StoreWrapper(schema.Store)
+	}
 }
 
 func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -149,23 +180,17 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		return apiRequest, nil
 	}
 
-	b := builder.NewBuilder(apiRequest)
-
 	if action == nil && apiRequest.Type != "" {
 		var handler types.RequestHandler
 		switch apiRequest.Method {
 		case http.MethodGet:
 			handler = apiRequest.Schema.ListHandler
-			apiRequest.Body = nil
 		case http.MethodPost:
 			handler = apiRequest.Schema.CreateHandler
-			apiRequest.Body, err = b.Construct(apiRequest.Schema, apiRequest.Body, builder.Create)
 		case http.MethodPut:
 			handler = apiRequest.Schema.UpdateHandler
-			apiRequest.Body, err = b.Construct(apiRequest.Schema, apiRequest.Body, builder.Update)
 		case http.MethodDelete:
 			handler = apiRequest.Schema.DeleteHandler
-			apiRequest.Body = nil
 		}
 
 		if err != nil {
@@ -173,7 +198,7 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 		}
 
 		if handler == nil {
-			return apiRequest, httperror.NewAPIError(httperror.NOT_FOUND, "")
+			return apiRequest, httperror.NewAPIError(httperror.NotFound, "")
 		}
 
 		return apiRequest, handler(apiRequest)
@@ -194,16 +219,4 @@ func (s *Server) handleError(apiRequest *types.APIContext, err error) {
 	} else if apiRequest.Schema.ErrorHandler != nil {
 		apiRequest.Schema.ErrorHandler(apiRequest, err)
 	}
-}
-
-func (s *Server) addBuiltins(ctx context.Context) error {
-	if s.IgnoreBuiltin {
-		return nil
-	}
-
-	if err := s.AddSchemas(builtin.Schemas); err != nil {
-		return err
-	}
-
-	return nil
 }

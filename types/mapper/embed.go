@@ -8,7 +8,9 @@ import (
 
 type Embed struct {
 	Field          string
+	Optional       bool
 	ReadOnly       bool
+	Ignore         []string
 	ignoreOverride bool
 	embeddedFields []string
 }
@@ -37,20 +39,29 @@ func (e *Embed) ToInternal(data map[string]interface{}) {
 }
 
 func (e *Embed) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
-	internalSchema, err := validateInternalField(e.Field, schema)
+	err := validateField(e.Field, schema)
 	if err != nil {
+		if e.Optional {
+			return nil
+		}
 		return err
 	}
 
 	e.embeddedFields = []string{}
 
-	embeddedSchemaID := internalSchema.ResourceFields[e.Field].Type
+	embeddedSchemaID := schema.ResourceFields[e.Field].Type
 	embeddedSchema := schemas.Schema(&schema.Version, embeddedSchemaID)
 	if embeddedSchema == nil {
 		return fmt.Errorf("failed to find schema %s for embedding", embeddedSchemaID)
 	}
 
 	for name, field := range embeddedSchema.ResourceFields {
+		for _, ignore := range e.Ignore {
+			if ignore == name {
+				continue
+			}
+		}
+
 		if !e.ignoreOverride {
 			if _, ok := schema.ResourceFields[name]; ok {
 				return fmt.Errorf("embedding field %s on %s will overwrite the field %s",

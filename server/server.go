@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/norman/api"
@@ -14,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func NewAPIServer(ctx context.Context, kubeConfig string, schemas *types.Schemas) (http.Handler, error) {
+func NewAPIServer(ctx context.Context, kubeConfig string, schemas *types.Schemas) (*api.Server, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build kubeConfig")
@@ -22,7 +21,7 @@ func NewAPIServer(ctx context.Context, kubeConfig string, schemas *types.Schemas
 	return NewAPIServerFromConfig(ctx, config, schemas)
 }
 
-func NewClients(kubeConfig string) (*rest.RESTClient, clientset.Interface, error) {
+func NewClients(kubeConfig string) (rest.Interface, clientset.Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		return nil, nil, err
@@ -30,7 +29,7 @@ func NewClients(kubeConfig string) (*rest.RESTClient, clientset.Interface, error
 	return NewClientsFromConfig(config)
 }
 
-func NewClientsFromConfig(config *rest.Config) (*rest.RESTClient, clientset.Interface, error) {
+func NewClientsFromConfig(config *rest.Config) (rest.Interface, clientset.Interface, error) {
 	dynamicConfig := *config
 	if dynamicConfig.NegotiatedSerializer == nil {
 		configConfig := dynamic.ContentConfig()
@@ -50,7 +49,7 @@ func NewClientsFromConfig(config *rest.Config) (*rest.RESTClient, clientset.Inte
 	return k8sClient, apiExtClient, nil
 }
 
-func NewAPIServerFromConfig(ctx context.Context, config *rest.Config, schemas *types.Schemas) (http.Handler, error) {
+func NewAPIServerFromConfig(ctx context.Context, config *rest.Config, schemas *types.Schemas) (*api.Server, error) {
 	k8sClient, apiExtClient, err := NewClientsFromConfig(config)
 	if err != nil {
 		return nil, err
@@ -58,17 +57,12 @@ func NewAPIServerFromConfig(ctx context.Context, config *rest.Config, schemas *t
 	return NewAPIServerFromClients(ctx, k8sClient, apiExtClient, schemas)
 }
 
-func NewAPIServerFromClients(ctx context.Context, k8sClient *rest.RESTClient, apiExtClient clientset.Interface, schemas *types.Schemas) (http.Handler, error) {
+func NewAPIServerFromClients(ctx context.Context, k8sClient rest.Interface, apiExtClient clientset.Interface, schemas *types.Schemas) (*api.Server, error) {
 	store := crd.NewCRDStore(apiExtClient, k8sClient)
 	if err := store.AddSchemas(ctx, schemas); err != nil {
 		return nil, err
 	}
 
 	server := api.NewAPIServer()
-	if err := server.AddSchemas(schemas); err != nil {
-		return nil, err
-	}
-
-	err := server.Start(ctx)
-	return server, err
+	return server, server.AddSchemas(schemas)
 }

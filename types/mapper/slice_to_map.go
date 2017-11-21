@@ -31,7 +31,7 @@ func (s SliceToMap) FromInternal(data map[string]interface{}) {
 
 func (s SliceToMap) ToInternal(data map[string]interface{}) {
 	datas, _ := data[s.Field].(map[string]interface{})
-	result := []map[string]interface{}{}
+	var result []map[string]interface{}
 
 	for name, item := range datas {
 		mapItem, _ := item.(map[string]interface{})
@@ -47,14 +47,14 @@ func (s SliceToMap) ToInternal(data map[string]interface{}) {
 }
 
 func (s SliceToMap) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
-	internalSchema, err := validateInternalField(s.Field, schema)
+	err := validateField(s.Field, schema)
 	if err != nil {
 		return err
 	}
 
-	field := internalSchema.ResourceFields[s.Field]
+	field := schema.ResourceFields[s.Field]
 	if !definition.IsArrayType(field.Type) {
-		return fmt.Errorf("field %s on %s is not an array", s.Field, internalSchema.ID)
+		return fmt.Errorf("field %s on %s is not an array", s.Field, schema.ID)
 	}
 
 	field.Type = "map[" + definition.SubType(field.Type) + "]"

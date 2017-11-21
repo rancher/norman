@@ -5,13 +5,14 @@ import (
 
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
+	"github.com/rancher/norman/types/mapper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 )
 
 type Store struct {
-	k8sClient      *rest.RESTClient
+	k8sClient      rest.Interface
 	prefix         []string
 	group          string
 	version        string
@@ -19,7 +20,7 @@ type Store struct {
 	resourcePlural string
 }
 
-func NewProxyStore(k8sClient *rest.RESTClient,
+func NewProxyStore(k8sClient rest.Interface,
 	prefix []string, group, version, kind, resourcePlural string) *Store {
 	return &Store{
 		k8sClient:      k8sClient,
@@ -40,7 +41,7 @@ func (p *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id stri
 	return p.singleResult(schema, req)
 }
 
-func (p *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
+func (p *Store) List(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) ([]map[string]interface{}, error) {
 	namespace := getNamespace(apiContext, opt)
 
 	req := p.common(namespace, p.k8sClient.Get())
@@ -51,7 +52,7 @@ func (p *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 		return nil, err
 	}
 
-	result := []map[string]interface{}{}
+	var result []map[string]interface{}
 
 	for _, obj := range resultList.Items {
 		result = append(result, p.fromInternal(schema, obj.Object))
@@ -60,18 +61,14 @@ func (p *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 	return result, nil
 }
 
-func getNamespace(apiContext *types.APIContext, opt *types.QueryOptions) string {
+func getNamespace(apiContext *types.APIContext, opt types.QueryOptions) string {
 	if val, ok := apiContext.SubContext["namespace"]; ok {
 		return convert.ToString(val)
 	}
 
-	if opt == nil {
-		return ""
-	}
-
 	for _, condition := range opt.Conditions {
-		if condition.Field == "namespace" && len(condition.Values) > 0 {
-			return convert.ToString(condition.Values[0])
+		if condition.Field == "namespace" && condition.Value != "" {
+			return condition.Value
 		}
 	}
 
@@ -81,6 +78,14 @@ func getNamespace(apiContext *types.APIContext, opt *types.QueryOptions) string 
 func (p *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
 	namespace, _ := data["namespace"].(string)
 	p.toInternal(schema.Mapper, data)
+
+	name, _ := mapper.GetValueN(data, "metadata", "name").(string)
+	if name == "" {
+		generated, _ := mapper.GetValueN(data, "metadata", "generateName").(string)
+		if generated == "" {
+			mapper.PutValue(data, schema.ID+"-", "metadata", "generateName")
+		}
+	}
 
 	req := p.common(namespace, p.k8sClient.Post()).
 		Body(&unstructured.Unstructured{
@@ -179,17 +184,6 @@ func (p *Store) common(namespace string, req *rest.Request) *rest.Request {
 func (p *Store) fromInternal(schema *types.Schema, data map[string]interface{}) map[string]interface{} {
 	if schema.Mapper != nil {
 		schema.Mapper.FromInternal(data)
-	}
-	data["type"] = schema.ID
-	name, _ := data["name"].(string)
-	namespace, _ := data["namespace"].(string)
-
-	if name != "" {
-		if namespace == "" {
-			data["id"] = name
-		} else {
-			data["id"] = namespace + ":" + name
-		}
 	}
 
 	return data

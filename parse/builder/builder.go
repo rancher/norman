@@ -51,7 +51,7 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 		wasNull := value == nil && (field.Nullable || field.Default == nil)
 		value, err := b.convert(field.Type, value, op)
 		if err != nil {
-			return httperror.WrapFieldAPIError(err, httperror.INVALID_FORMAT, fieldName, err.Error())
+			return httperror.WrapFieldAPIError(err, httperror.InvalidFormat, fieldName, err.Error())
 		}
 
 		if value != nil || wasNull {
@@ -59,7 +59,7 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 				if slice, ok := value.([]interface{}); ok {
 					for _, sliceValue := range slice {
 						if sliceValue == nil {
-							return httperror.NewFieldAPIError(httperror.NOT_NULLABLE, fieldName, "Individual array values can not be null")
+							return httperror.NewFieldAPIError(httperror.NotNullable, fieldName, "Individual array values can not be null")
 						}
 						if err := checkFieldCriteria(fieldName, field, sliceValue); err != nil {
 							return err
@@ -82,6 +82,11 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 		}
 	}
 
+	if op == List {
+		result["type"] = input["type"]
+		result["id"] = input["id"]
+	}
+
 	return nil
 }
 
@@ -95,7 +100,7 @@ func (b *Builder) checkDefaultAndRequired(schema *types.Schema, input map[string
 		_, hasKey = result[fieldName]
 		if op == Create && fieldMatchesOp(field, Create) && field.Required {
 			if !hasKey {
-				return httperror.NewFieldAPIError(httperror.MISSING_REQUIRED, fieldName, "")
+				return httperror.NewFieldAPIError(httperror.MissingRequired, fieldName, "")
 			}
 
 			if definition.IsArrayType(field.Type) {
@@ -104,7 +109,7 @@ func (b *Builder) checkDefaultAndRequired(schema *types.Schema, input map[string
 					return err
 				}
 				if len(slice) == 0 {
-					return httperror.NewFieldAPIError(httperror.MISSING_REQUIRED, fieldName, "")
+					return httperror.NewFieldAPIError(httperror.MissingRequired, fieldName, "")
 				}
 			}
 		}
@@ -137,25 +142,25 @@ func checkFieldCriteria(fieldName string, field types.Field, value interface{}) 
 		strVal = fmt.Sprint(value)
 	}
 
-	if value == nil && !field.Nullable {
-		return httperror.NewFieldAPIError(httperror.NOT_NULLABLE, fieldName, "")
+	if (value == nil || value == "") && !field.Nullable {
+		return httperror.NewFieldAPIError(httperror.NotNullable, fieldName, "")
 	}
 
 	if isNum {
 		if field.Min != nil && numVal < *field.Min {
-			return httperror.NewFieldAPIError(httperror.MIN_LIMIT_EXCEEDED, fieldName, "")
+			return httperror.NewFieldAPIError(httperror.MinLimitExceeded, fieldName, "")
 		}
 		if field.Max != nil && numVal > *field.Max {
-			return httperror.NewFieldAPIError(httperror.MAX_LIMIT_EXCEEDED, fieldName, "")
+			return httperror.NewFieldAPIError(httperror.MaxLimitExceeded, fieldName, "")
 		}
 	}
 
 	if hasStrVal {
 		if field.MinLength != nil && int64(len(strVal)) < *field.MinLength {
-			return httperror.NewFieldAPIError(httperror.MIN_LENGTH_EXCEEDED, fieldName, "")
+			return httperror.NewFieldAPIError(httperror.MinLengthExceeded, fieldName, "")
 		}
 		if field.MaxLength != nil && int64(len(strVal)) > *field.MaxLength {
-			return httperror.NewFieldAPIError(httperror.MAX_LENGTH_EXCEEDED, fieldName, "")
+			return httperror.NewFieldAPIError(httperror.MaxLengthExceeded, fieldName, "")
 		}
 	}
 
@@ -170,7 +175,7 @@ func checkFieldCriteria(fieldName string, field types.Field, value interface{}) 
 			}
 
 			if !found {
-				httperror.NewFieldAPIError(httperror.INVALID_OPTION, fieldName, "")
+				httperror.NewFieldAPIError(httperror.InvalidOption, fieldName, "")
 			}
 		}
 	}
@@ -178,7 +183,7 @@ func checkFieldCriteria(fieldName string, field types.Field, value interface{}) 
 	if len(field.ValidChars) > 0 && hasStrVal {
 		for _, c := range strVal {
 			if !strings.ContainsRune(field.ValidChars, c) {
-				httperror.NewFieldAPIError(httperror.INVALID_CHARACTERS, fieldName, "")
+				httperror.NewFieldAPIError(httperror.InvalidCharacters, fieldName, "")
 			}
 
 		}
@@ -186,7 +191,7 @@ func checkFieldCriteria(fieldName string, field types.Field, value interface{}) 
 
 	if len(field.InvalidChars) > 0 && hasStrVal {
 		if strings.ContainsAny(strVal, field.InvalidChars) {
-			httperror.NewFieldAPIError(httperror.INVALID_CHARACTERS, fieldName, "")
+			httperror.NewFieldAPIError(httperror.InvalidCharacters, fieldName, "")
 		}
 	}
 
@@ -211,7 +216,11 @@ func (b *Builder) convert(fieldType string, value interface{}, op Operation) (in
 	case "json":
 		return value, nil
 	case "date":
-		return convert.ToString(value), nil
+		v := convert.ToString(value)
+		if v == "" {
+			return nil, nil
+		}
+		return v, nil
 	case "boolean":
 		return convert.ToBool(value), nil
 	case "enum":
@@ -232,12 +241,12 @@ func (b *Builder) convert(fieldType string, value interface{}, op Operation) (in
 func (b *Builder) convertType(fieldType string, value interface{}, op Operation) (interface{}, error) {
 	schema := b.Schemas.Schema(b.Version, fieldType)
 	if schema == nil {
-		return nil, httperror.NewAPIError(httperror.INVALID_TYPE, "Failed to find type "+fieldType)
+		return nil, httperror.NewAPIError(httperror.InvalidType, "Failed to find type "+fieldType)
 	}
 
 	mapValue, ok := value.(map[string]interface{})
 	if !ok {
-		return nil, httperror.NewAPIError(httperror.INVALID_FORMAT, fmt.Sprintf("Value can not be converted to type %s: %v", fieldType, value))
+		return nil, httperror.NewAPIError(httperror.InvalidFormat, fmt.Sprintf("Value can not be converted to type %s: %v", fieldType, value))
 	}
 
 	return b.Construct(schema, mapValue, op)
@@ -247,7 +256,7 @@ func (b *Builder) convertReferenceType(fieldType string, value interface{}) (str
 	subType := definition.SubType(fieldType)
 	strVal := convert.ToString(value)
 	if b.RefValidator != nil && !b.RefValidator.Validate(subType, strVal) {
-		return "", httperror.NewAPIError(httperror.INVALID_REFERENCE, fmt.Sprintf("Not found type: %s id: %s", subType, strVal))
+		return "", httperror.NewAPIError(httperror.InvalidReference, fmt.Sprintf("Not found type: %s id: %s", subType, strVal))
 	}
 	return strVal, nil
 }
@@ -293,7 +302,7 @@ func (b *Builder) convertMap(fieldType string, value interface{}, op Operation) 
 	for key, value := range mapValue {
 		val, err := b.convert(subType, value, op)
 		if err != nil {
-			return nil, httperror.WrapAPIError(err, httperror.INVALID_FORMAT, err.Error())
+			return nil, httperror.WrapAPIError(err, httperror.InvalidFormat, err.Error())
 		}
 		result[key] = val
 	}

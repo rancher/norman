@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/rancher/norman/api/builtin"
+	"github.com/rancher/norman/httperror"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/urlbuilder"
 )
@@ -22,7 +23,9 @@ var (
 	}
 )
 
-func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*types.APIContext, error) {
+type ResolverFunc func(typeName string, context *types.APIContext) error
+
+func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, resolverFunc ResolverFunc) (*types.APIContext, error) {
 	var err error
 
 	result := &types.APIContext{
@@ -45,17 +48,15 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 
 	result.Method = parseMethod(req)
 	result.Action, result.Method = parseAction(req, result.Method)
-	result.Body, err = parseBody(req)
-	if err != nil {
-		return result, err
-	}
 
 	result.URLBuilder, err = urlbuilder.New(req, *result.Version, result.Schemas)
 	if err != nil {
 		return result, err
 	}
 
-	parsePath(result, req)
+	if err := parsePath(result, req, resolverFunc); err != nil {
+		return result, err
+	}
 
 	if result.Schema == nil {
 		result.Method = http.MethodGet
@@ -74,7 +75,8 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (*
 
 func parseSubContext(parts []string, apiRequest *types.APIContext) []string {
 	subContext := ""
-	apiRequest.SubContext = map[string]interface{}{}
+	apiRequest.SubContext = map[string]string{}
+	apiRequest.Attributes = map[string]interface{}{}
 
 	for len(parts) > 3 && apiRequest.Version != nil {
 		resourceType := parts[1]
@@ -100,9 +102,27 @@ func parseSubContext(parts []string, apiRequest *types.APIContext) []string {
 	return parts
 }
 
-func parsePath(apiRequest *types.APIContext, request *http.Request) {
+func DefaultResolver(typeName string, apiContext *types.APIContext) error {
+	if typeName == "" {
+		return nil
+	}
+
+	schema := apiContext.Schemas.Schema(apiContext.Version, typeName)
+	if schema == nil && (typeName == builtin.Schema.ID || typeName == builtin.Schema.PluralName) {
+		// Schemas are special, we include it as though part of the API request version
+		schema = apiContext.Schemas.Schema(&builtin.Version, typeName)
+	}
+	if schema == nil {
+		return nil
+	}
+
+	apiContext.Schema = schema
+	return nil
+}
+
+func parsePath(apiRequest *types.APIContext, request *http.Request, resolverFunc ResolverFunc) error {
 	if apiRequest.Version == nil {
-		return
+		return nil
 	}
 
 	path := request.URL.Path
@@ -110,38 +130,38 @@ func parsePath(apiRequest *types.APIContext, request *http.Request) {
 
 	versionPrefix := apiRequest.Version.Path
 	if !strings.HasPrefix(path, versionPrefix) {
-		return
+		return nil
 	}
 
 	parts := strings.Split(path[len(versionPrefix):], "/")
 	parts = parseSubContext(parts, apiRequest)
 
 	if len(parts) > 4 {
-		return
+		return httperror.NewAPIError(httperror.NotFound, "No handler for path")
 	}
 
 	typeName := safeIndex(parts, 1)
 	id := safeIndex(parts, 2)
 	link := safeIndex(parts, 3)
 
-	if typeName == "" {
-		return
+	if err := resolverFunc(typeName, apiRequest); err != nil {
+		return err
 	}
 
-	schema := apiRequest.Schemas.Schema(apiRequest.Version, typeName)
-	if schema == nil {
-		return
+	if apiRequest.Schema == nil {
+		return nil
 	}
 
-	apiRequest.Schema = schema
-	apiRequest.Type = schema.ID
+	apiRequest.Type = apiRequest.Schema.ID
 
 	if id == "" {
-		return
+		return nil
 	}
 
 	apiRequest.ID = id
 	apiRequest.Link = link
+
+	return nil
 }
 
 func safeIndex(slice []string, index int) string {
@@ -166,9 +186,8 @@ func parseResponseFormat(req *http.Request) string {
 	// User agent has Mozilla and browser accepts */*
 	if IsBrowser(req, true) {
 		return "html"
-	} else {
-		return "json"
 	}
+	return "json"
 }
 
 func parseMethod(req *http.Request) string {
@@ -206,7 +225,7 @@ func parseVersion(schemas *types.Schemas, path string) *types.APIVersion {
 	return nil
 }
 
-func parseBody(req *http.Request) (map[string]interface{}, error) {
+func Body(req *http.Request) (map[string]interface{}, error) {
 	req.ParseMultipartForm(maxFormSize)
 	if req.MultipartForm != nil {
 		return valuesToBody(req.MultipartForm.Value), nil
