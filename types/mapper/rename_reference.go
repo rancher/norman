@@ -34,6 +34,14 @@ func (r *RenameReference) ModifySchema(schema *types.Schema, schemas *types.Sche
 			}
 
 			mappers = append(mappers, move)
+		} else if definition.IsArrayType(field.Type) && definition.IsReferenceType(definition.SubType(field.Type)) && strings.HasSuffix(name, "Names") {
+			newName := strings.TrimSuffix(name, "Names") + "Ids"
+			move := Move{From: name, To: newName}
+			if err := move.ModifySchema(schema, schemas); err != nil {
+				return err
+			}
+
+			mappers = append(mappers, move)
 		}
 	}
 
