@@ -43,7 +43,7 @@ type {{.schema.CodeName}}Controller interface {
 	Informer() cache.SharedIndexInformer
 	AddHandler(handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
-	Start(threadiness int, ctx context.Context) error
+	Start(ctx context.Context, threadiness int) error
 }
 
 type {{.schema.CodeName}}Interface interface {
