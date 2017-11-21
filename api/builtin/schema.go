@@ -3,16 +3,15 @@ package builtin
 import (
 	"net/http"
 
-	"github.com/rancher/norman/store/empty"
 	"github.com/rancher/norman/store/schema"
 	"github.com/rancher/norman/types"
 )
 
 var (
 	Version = types.APIVersion{
-		Group:   "io.cattle.builtin",
-		Version: "v3",
-		Path:    "/v3",
+		Group:   "meta.cattle.io",
+		Version: "v1",
+		Path:    "/v1-meta",
 	}
 
 	Schema = types.Schema{
@@ -23,7 +22,7 @@ var (
 		ResourceFields: map[string]types.Field{
 			"collectionActions": {Type: "map[json]"},
 			"collectionFields":  {Type: "map[json]"},
-			"collectionFitlers": {Type: "map[json]"},
+			"collectionFilters": {Type: "map[json]"},
 			"collectionMethods": {Type: "array[string]"},
 			"pluralName":        {Type: "string"},
 			"resourceActions":   {Type: "map[json]"},
@@ -41,10 +40,11 @@ var (
 		ResourceMethods:   []string{},
 		CollectionMethods: []string{},
 		ResourceFields: map[string]types.Field{
-			"code":    {Type: "string"},
-			"detail":  {Type: "string"},
-			"message": {Type: "string"},
-			"status":  {Type: "int"},
+			"code":      {Type: "string"},
+			"detail":    {Type: "string", Nullable: true},
+			"message":   {Type: "string", Nullable: true},
+			"fieldName": {Type: "string", Nullable: true},
+			"status":    {Type: "int"},
 		},
 	}
 
@@ -81,32 +81,46 @@ var (
 		AddSchema(&APIRoot)
 )
 
-func apiVersionFromMap(apiVersion map[string]interface{}) types.APIVersion {
+func apiVersionFromMap(schemas *types.Schemas, apiVersion map[string]interface{}) types.APIVersion {
 	path, _ := apiVersion["path"].(string)
 	version, _ := apiVersion["version"].(string)
 	group, _ := apiVersion["group"].(string)
 
-	return types.APIVersion{
+	apiVersionObj := types.APIVersion{
 		Path:    path,
 		Version: version,
 		Group:   group,
 	}
+
+	for _, testVersion := range schemas.Versions() {
+		if testVersion.Equals(&apiVersionObj) {
+			return testVersion
+		}
+	}
+
+	return apiVersionObj
 }
 
 func SchemaFormatter(apiContext *types.APIContext, resource *types.RawResource) {
 	data, _ := resource.Values["version"].(map[string]interface{})
-	apiVersion := apiVersionFromMap(data)
+	apiVersion := apiVersionFromMap(apiContext.Schemas, data)
 
 	schema := apiContext.Schemas.Schema(&apiVersion, resource.ID)
-	collectionLink := getSchemaCollectionLink(apiContext, schema)
+	if schema == nil {
+		return
+	}
+
+	collectionLink := getSchemaCollectionLink(apiContext, schema, &apiVersion)
 	if collectionLink != "" {
 		resource.Links["collection"] = collectionLink
 	}
+
+	resource.Links["self"] = apiContext.URLBuilder.SchemaLink(schema)
 }
 
-func getSchemaCollectionLink(apiContext *types.APIContext, schema *types.Schema) string {
+func getSchemaCollectionLink(apiContext *types.APIContext, schema *types.Schema, apiVersion *types.APIVersion) string {
 	if schema != nil && contains(schema.CollectionMethods, http.MethodGet) {
-		return apiContext.URLBuilder.Collection(schema)
+		return apiContext.URLBuilder.Collection(schema, apiVersion)
 	}
 	return ""
 }
@@ -118,69 +132,4 @@ func contains(list []string, needle string) bool {
 		}
 	}
 	return false
-}
-
-func APIRootFormatter(apiContext *types.APIContext, resource *types.RawResource) {
-	path, _ := resource.Values["path"].(string)
-	if path == "" {
-		return
-	}
-
-	resource.Links["root"] = apiContext.URLBuilder.RelativeToRoot(path)
-
-	data, _ := resource.Values["apiVersion"].(map[string]interface{})
-	apiVersion := apiVersionFromMap(data)
-
-	for name, schema := range apiContext.Schemas.SchemasForVersion(apiVersion) {
-		collectionLink := getSchemaCollectionLink(apiContext, schema)
-		if collectionLink != "" {
-			resource.Links[name] = collectionLink
-		}
-	}
-}
-
-type APIRootStore struct {
-	empty.Store
-	roots []string
-}
-
-func NewAPIRootStore(roots []string) types.Store {
-	return &APIRootStore{roots: roots}
-}
-
-func (a *APIRootStore) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	for _, version := range apiContext.Schemas.Versions() {
-		if version.Path == id {
-			return apiVersionToAPIRootMap(version), nil
-		}
-	}
-	return nil, nil
-}
-
-func (a *APIRootStore) List(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
-	roots := []map[string]interface{}{}
-
-	for _, version := range apiContext.Schemas.Versions() {
-		roots = append(roots, apiVersionToAPIRootMap(version))
-	}
-
-	for _, root := range a.roots {
-		roots = append(roots, map[string]interface{}{
-			"path": root,
-		})
-	}
-
-	return roots, nil
-}
-
-func apiVersionToAPIRootMap(version types.APIVersion) map[string]interface{} {
-	return map[string]interface{}{
-		"type": "/v3/apiRoot",
-		"apiVersion": map[string]interface{}{
-			"version": version.Version,
-			"group":   version.Group,
-			"path":    version.Path,
-		},
-		"path": version.Path,
-	}
 }

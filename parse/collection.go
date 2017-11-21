@@ -9,13 +9,14 @@ import (
 )
 
 var (
-	defaultLimit = int64(100)
+	defaultLimit = int64(1000)
 	maxLimit     = int64(3000)
 )
 
-func QueryOptions(req *http.Request, schema *types.Schema) *types.QueryOptions {
+func QueryOptions(apiContext *types.APIContext, schema *types.Schema) types.QueryOptions {
+	req := apiContext.Request
 	if req.Method != http.MethodGet {
-		return nil
+		return types.QueryOptions{}
 	}
 
 	result := &types.QueryOptions{}
@@ -24,7 +25,7 @@ func QueryOptions(req *http.Request, schema *types.Schema) *types.QueryOptions {
 	result.Pagination = parsePagination(req)
 	result.Conditions = parseFilters(schema, req)
 
-	return result
+	return *result
 }
 
 func parseOrder(req *http.Request) types.SortOrder {
@@ -64,7 +65,7 @@ func parsePagination(req *http.Request) *types.Pagination {
 
 		if limitInt > maxLimit {
 			result.Limit = &maxLimit
-		} else if limitInt > 0 {
+		} else if limitInt >= 0 {
 			result.Limit = &limitInt
 		}
 	}
@@ -72,7 +73,7 @@ func parsePagination(req *http.Request) *types.Pagination {
 	return result
 }
 
-func parseNameAndOp(value string) (string, string) {
+func parseNameAndOp(value string) (string, types.ModifierType) {
 	name := value
 	op := "eq"
 
@@ -82,11 +83,11 @@ func parseNameAndOp(value string) (string, string) {
 		name = value[0:idx]
 	}
 
-	return name, op
+	return name, types.ModifierType(op)
 }
 
 func parseFilters(schema *types.Schema, req *http.Request) []*types.QueryCondition {
-	conditions := []*types.QueryCondition{}
+	var conditions []*types.QueryCondition
 	for key, values := range req.URL.Query() {
 		name, op := parseNameAndOp(key)
 		filter, ok := schema.CollectionFilters[name]
@@ -99,12 +100,7 @@ func parseFilters(schema *types.Schema, req *http.Request) []*types.QueryConditi
 				continue
 			}
 
-			genericValues := []interface{}{}
-			for _, value := range values {
-				genericValues = append(genericValues, value)
-			}
-
-			conditions = append(conditions, types.NewConditionFromString(name, mod, genericValues))
+			conditions = append(conditions, types.NewConditionFromString(name, mod, values...))
 		}
 	}
 

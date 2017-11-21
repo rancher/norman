@@ -30,6 +30,11 @@ var (
 	underscoreRegexp = regexp.MustCompile(`([a-z])([A-Z])`)
 )
 
+type fieldInfo struct {
+	Name string
+	Type string
+}
+
 func getGoType(field types.Field, schema *types.Schema, schemas *types.Schemas) string {
 	return getTypeString(field.Nullable, field.Type, schema, schemas)
 }
@@ -87,10 +92,13 @@ func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas
 	return name
 }
 
-func getTypeMap(schema *types.Schema, schemas *types.Schemas) map[string]string {
-	result := map[string]string{}
-	for _, field := range schema.ResourceFields {
-		result[field.CodeName] = getGoType(field, schema, schemas)
+func getTypeMap(schema *types.Schema, schemas *types.Schemas) map[string]fieldInfo {
+	result := map[string]fieldInfo{}
+	for name, field := range schema.ResourceFields {
+		result[field.CodeName] = fieldInfo{
+			Name: name,
+			Type: getGoType(field, schema, schemas),
+		}
 	}
 	return result
 }
@@ -143,9 +151,7 @@ func generateController(outputDir string, schema *types.Schema, schemas *types.S
 	}
 
 	return typeTemplate.Execute(output, map[string]interface{}{
-		"schema":          schema,
-		"structFields":    getTypeMap(schema, schemas),
-		"resourceActions": getResourceActions(schema, schemas),
+		"schema": schema,
 	})
 }
 

@@ -44,6 +44,5 @@ func (e Enum) ToInternal(data map[string]interface{}) {
 }
 
 func (e Enum) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
-	_, err := validateInternalField(e.Field, schema)
-	return err
+	return validateField(e.Field, schema)
 }

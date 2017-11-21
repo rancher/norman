@@ -12,7 +12,7 @@ func ErrorHandler(request *types.APIContext, err error) {
 	} else {
 		logrus.Errorf("Unknown error: %v", err)
 		error = &APIError{
-			code:    SERVER_ERROR,
+			code:    ServerError,
 			message: err.Error(),
 		}
 	}
@@ -23,7 +23,7 @@ func ErrorHandler(request *types.APIContext, err error) {
 
 func toError(apiError *APIError) map[string]interface{} {
 	e := map[string]interface{}{
-		"type":    "/v3/schema",
+		"type":    "/v1-meta/schemas/error",
 		"code":    apiError.code.code,
 		"message": apiError.message,
 	}

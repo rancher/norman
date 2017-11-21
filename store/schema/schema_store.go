@@ -18,7 +18,7 @@ func NewSchemaStore() types.Store {
 }
 
 func (s *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	for _, schema := range apiContext.Schemas.Schemas() {
+	for _, schema := range apiContext.Schemas.SchemasForVersion(*apiContext.Version) {
 		if strings.EqualFold(schema.ID, id) {
 			schemaData := map[string]interface{}{}
 
@@ -33,16 +33,19 @@ func (s *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id stri
 	return nil, nil
 }
 
-func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
-	schemaData := []map[string]interface{}{}
+func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) ([]map[string]interface{}, error) {
+	schemaMap := apiContext.Schemas.SchemasForVersion(*apiContext.Version)
+	schemas := make([]*types.Schema, 0, len(schemaMap))
+	schemaData := make([]map[string]interface{}, 0, len(schemaMap))
 
-	data, err := json.Marshal(apiContext.Schemas.Schemas())
+	for _, schema := range schemaMap {
+		schemas = append(schemas, schema)
+	}
+
+	data, err := json.Marshal(schemas)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(data, &schemaData); err != nil {
-		return nil, err
-	}
-	return schemaData, nil
+	return schemaData, json.Unmarshal(data, &schemaData)
 }

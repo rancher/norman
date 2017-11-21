@@ -11,11 +11,10 @@ import (
 
 func funcs() template.FuncMap {
 	return template.FuncMap{
-		"toLowerCamelCase": convert.LowerTitle,
-		"capitalize":       convert.Capitalize,
-		"upper":            strings.ToUpper,
-		"toLower":          strings.ToLower,
-		"hasGet":           hasGet,
+		"capitalize": convert.Capitalize,
+		"upper":      strings.ToUpper,
+		"toLower":    strings.ToLower,
+		"hasGet":     hasGet,
 	}
 }
 

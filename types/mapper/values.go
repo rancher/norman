@@ -6,9 +6,8 @@ func RemoveValue(data map[string]interface{}, keys ...string) (interface{}, bool
 			val, ok := data[key]
 			delete(data, key)
 			return val, ok
-		} else {
-			data, _ = data[key].(map[string]interface{})
 		}
+		data, _ = data[key].(map[string]interface{})
 	}
 
 	return nil, false
@@ -51,9 +50,8 @@ func GetValue(data map[string]interface{}, keys ...string) (interface{}, bool) {
 		if i == len(keys)-1 {
 			val, ok := data[key]
 			return val, ok
-		} else {
-			data, _ = data[key].(map[string]interface{})
 		}
+		data, _ = data[key].(map[string]interface{})
 	}
 
 	return nil, false

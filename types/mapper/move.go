@@ -36,7 +36,7 @@ func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {
 		return fmt.Errorf("failed to find field %s on schema %s", m.From, s.ID)
 	}
 
-	toSchema, toFieldName, toField, ok, err := getField(s, schemas, m.To)
+	toSchema, toFieldName, _, ok, err := getField(s, schemas, m.To)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {
 	}
 
 	if !m.DestDefined {
-		toField.CodeName = convert.Capitalize(toFieldName)
+		fromField.CodeName = convert.Capitalize(toFieldName)
 		toSchema.ResourceFields[toFieldName] = fromField
 	}
 

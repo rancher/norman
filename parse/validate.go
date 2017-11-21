@@ -23,7 +23,7 @@ func ValidateMethod(request *types.APIContext) error {
 	}
 
 	if !supportedMethods[request.Method] {
-		return httperror.NewAPIError(httperror.METHOD_NOT_ALLOWED, fmt.Sprintf("Method %s not supported", request.Method))
+		return httperror.NewAPIError(httperror.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
 	}
 
 	if request.Type == "" || request.Schema == nil {
@@ -41,5 +41,5 @@ func ValidateMethod(request *types.APIContext) error {
 		}
 	}
 
-	return httperror.NewAPIError(httperror.METHOD_NOT_ALLOWED, fmt.Sprintf("Method %s not supported", request.Method))
+	return httperror.NewAPIError(httperror.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
 }
