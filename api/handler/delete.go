@@ -15,6 +15,6 @@ func DeleteHandler(request *types.APIContext) error {
 		}
 	}
 
-	request.WriteResponse(http.StatusOK, nil)
+	request.WriteResponse(http.StatusNoContent, nil)
 	return nil
 }

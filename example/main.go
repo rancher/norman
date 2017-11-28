@@ -1,13 +1,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/rancher/norman/server"
+	"github.com/rancher/norman/api"
+	"github.com/rancher/norman/store/crd"
 	"github.com/rancher/norman/types"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Foo struct {
@@ -32,12 +33,22 @@ var (
 )
 
 func main() {
-	if _, err := Schemas.Import(&version, Foo{}); err != nil {
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	if err != nil {
 		panic(err)
 	}
 
-	server, err := server.NewAPIServer(context.Background(), os.Getenv("KUBECONFIG"), Schemas)
+	store, err := crd.NewCRDStoreFromConfig(*kubeConfig)
 	if err != nil {
+		panic(err)
+	}
+
+	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
+		schema.Store = store
+	})
+
+	server := api.NewAPIServer()
+	if err := server.AddSchemas(Schemas); err != nil {
 		panic(err)
 	}
 

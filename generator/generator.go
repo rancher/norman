@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -9,8 +11,6 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
-
-	"io"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
@@ -135,7 +135,7 @@ func generateType(outputDir string, schema *types.Schema, schemas *types.Schemas
 	})
 }
 
-func generateController(outputDir string, schema *types.Schema, schemas *types.Schemas) error {
+func generateController(external bool, outputDir string, schema *types.Schema, schemas *types.Schemas) error {
 	filePath := strings.ToLower("zz_generated_" + addUnderscore(schema.ID) + "_controller.go")
 	output, err := os.Create(path.Join(outputDir, filePath))
 	if err != nil {
@@ -150,8 +150,18 @@ func generateController(outputDir string, schema *types.Schema, schemas *types.S
 		return err
 	}
 
+	importPackage := ""
+	prefix := ""
+	if external {
+		parts := strings.Split(schema.PkgName, "/vendor/")
+		importPackage = fmt.Sprintf("\"%s\"", parts[len(parts)-1])
+		prefix = schema.Version.Version + "."
+	}
+
 	return typeTemplate.Execute(output, map[string]interface{}{
-		"schema": schema,
+		"schema":        schema,
+		"importPackage": importPackage,
+		"prefix":        prefix,
 	})
 }
 
@@ -195,6 +205,36 @@ func generateClient(outputDir string, schemas []*types.Schema) error {
 	})
 }
 
+func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage string, objs ...interface{}) error {
+	baseDir := args.DefaultSourceTree()
+	k8sDir := path.Join(baseDir, k8sOutputPackage)
+
+	if err := prepareDirs(k8sDir); err != nil {
+		return err
+	}
+
+	schemas := types.NewSchemas()
+	var controllers []*types.Schema
+
+	for _, obj := range objs {
+		schema, err := schemas.Import(version, obj)
+		if err != nil {
+			return err
+		}
+		controllers = append(controllers, schema)
+
+		if err := generateController(true, k8sDir, schema, schemas); err != nil {
+			return err
+		}
+	}
+
+	if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
+		return err
+	}
+
+	return generateK8sClient(k8sDir, version, controllers)
+}
+
 func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage string) error {
 	baseDir := args.DefaultSourceTree()
 	cattleDir := path.Join(baseDir, cattleOutputPackage)
@@ -220,7 +260,7 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 			!strings.HasPrefix(schema.PkgName, "k8s.io") &&
 			!strings.Contains(schema.PkgName, "/vendor/") {
 			controllers = append(controllers, schema)
-			if err := generateController(k8sDir, schema, schemas); err != nil {
+			if err := generateController(false, k8sDir, schema, schemas); err != nil {
 				return err
 			}
 		}

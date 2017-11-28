@@ -6,10 +6,13 @@ type TransformerFunc func(apiContext *types.APIContext, data map[string]interfac
 
 type ListTransformerFunc func(apiContext *types.APIContext, data []map[string]interface{}) ([]map[string]interface{}, error)
 
+type StreamTransformerFunc func(apiContext *types.APIContext, data chan map[string]interface{}) (chan map[string]interface{}, error)
+
 type TransformingStore struct {
-	Store           types.Store
-	Transformer     TransformerFunc
-	ListTransformer ListTransformerFunc
+	Store             types.Store
+	Transformer       TransformerFunc
+	ListTransformer   ListTransformerFunc
+	StreamTransformer StreamTransformerFunc
 }
 
 func (t *TransformingStore) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
@@ -21,6 +24,30 @@ func (t *TransformingStore) ByID(apiContext *types.APIContext, schema *types.Sch
 		return data, nil
 	}
 	return t.Transformer(apiContext, data)
+}
+
+func (t *TransformingStore) Watch(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) (chan map[string]interface{}, error) {
+	c, err := t.Store.Watch(apiContext, schema, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	if t.StreamTransformer != nil {
+		return t.StreamTransformer(apiContext, c)
+	}
+
+	result := make(chan map[string]interface{})
+	go func() {
+		for item := range c {
+			item, err := t.Transformer(apiContext, item)
+			if err == nil && item != nil {
+				result <- item
+			}
+		}
+		close(result)
+	}()
+
+	return result, nil
 }
 
 func (t *TransformingStore) List(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) ([]map[string]interface{}, error) {
@@ -43,7 +70,9 @@ func (t *TransformingStore) List(apiContext *types.APIContext, schema *types.Sch
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, item)
+		if item != nil {
+			result = append(result, item)
+		}
 	}
 
 	return result, nil

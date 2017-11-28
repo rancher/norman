@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"io"
+
 	"github.com/rancher/norman/parse"
 	"github.com/rancher/norman/parse/builder"
 	"github.com/rancher/norman/types"
@@ -21,13 +23,19 @@ func (j *JSONResponseWriter) start(apiContext *types.APIContext, code int, obj i
 
 func (j *JSONResponseWriter) Write(apiContext *types.APIContext, code int, obj interface{}) {
 	j.start(apiContext, code, obj)
-	j.Body(apiContext, code, obj)
+	j.Body(apiContext, apiContext.Response, obj)
 }
 
-func (j *JSONResponseWriter) Body(apiContext *types.APIContext, code int, obj interface{}) {
+func (j *JSONResponseWriter) Body(apiContext *types.APIContext, writer io.Writer, obj interface{}) error {
+	return j.VersionBody(apiContext, apiContext.Version, writer, obj)
+
+}
+
+func (j *JSONResponseWriter) VersionBody(apiContext *types.APIContext, version *types.APIVersion, writer io.Writer, obj interface{}) error {
 	var output interface{}
 
 	builder := builder.NewBuilder(apiContext)
+	builder.Version = version
 
 	switch v := obj.(type) {
 	case []interface{}:
@@ -41,8 +49,10 @@ func (j *JSONResponseWriter) Body(apiContext *types.APIContext, code int, obj in
 	}
 
 	if output != nil {
-		json.NewEncoder(apiContext.Response).Encode(output)
+		return json.NewEncoder(writer).Encode(output)
 	}
+
+	return nil
 }
 func (j *JSONResponseWriter) writeMapSlice(builder *builder.Builder, apiContext *types.APIContext, input []map[string]interface{}) *types.GenericCollection {
 	collection := newCollection(apiContext)

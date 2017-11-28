@@ -49,7 +49,7 @@ var (
 	}
 
 	Collection = types.Schema{
-		ID:                "error",
+		ID:                "collection",
 		Version:           Version,
 		ResourceMethods:   []string{},
 		CollectionMethods: []string{},

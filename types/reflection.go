@@ -174,7 +174,7 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 	schema.Mapper = mapper
 	s.AddSchema(schema)
 
-	return schema, nil
+	return schema, s.Err()
 }
 
 func jsonName(f reflect.StructField) string {

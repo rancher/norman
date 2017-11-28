@@ -11,10 +11,12 @@ import (
 	"github.com/rancher/norman/types/convert"
 	"github.com/sirupsen/logrus"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
 
@@ -25,7 +27,27 @@ type Store struct {
 	schemaStores    map[*types.Schema]*proxy.Store
 }
 
-func NewCRDStore(apiExtClientSet apiextclientset.Interface, k8sClient rest.Interface) *Store {
+func NewCRDStoreFromConfig(config rest.Config) (*Store, error) {
+	dynamicConfig := config
+	if dynamicConfig.NegotiatedSerializer == nil {
+		configConfig := dynamic.ContentConfig()
+		dynamicConfig.NegotiatedSerializer = configConfig.NegotiatedSerializer
+	}
+
+	k8sClient, err := rest.UnversionedRESTClientFor(&dynamicConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	apiExtClient, err := clientset.NewForConfig(&dynamicConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCRDStoreFromClients(apiExtClient, k8sClient), nil
+}
+
+func NewCRDStoreFromClients(apiExtClientSet apiextclientset.Interface, k8sClient rest.Interface) *Store {
 	return &Store{
 		apiExtClientSet: apiExtClientSet,
 		k8sClient:       k8sClient,
@@ -57,6 +79,14 @@ func (c *Store) List(apiContext *types.APIContext, schema *types.Schema, opt typ
 	return store.List(apiContext, schema, opt)
 }
 
+func (c *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) (chan map[string]interface{}, error) {
+	store, ok := c.schemaStores[schema]
+	if !ok {
+		return nil, nil
+	}
+	return store.Watch(apiContext, schema, opt)
+}
+
 func (c *Store) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
 	store, ok := c.schemaStores[schema]
 	if !ok {
@@ -73,14 +103,10 @@ func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 	return store.Create(apiContext, schema, data)
 }
 
-func (c *Store) AddSchemas(ctx context.Context, schemas *types.Schemas) error {
-	if schemas.Err() != nil {
-		return schemas.Err()
-	}
-
+func (c *Store) AddSchemas(ctx context.Context, schemas ...*types.Schema) error {
 	schemaStatus := map[*types.Schema]*apiext.CustomResourceDefinition{}
 
-	for _, schema := range schemas.Schemas() {
+	for _, schema := range schemas {
 		if schema.Store != nil || !contains(schema.CollectionMethods, http.MethodGet) {
 			continue
 		}
@@ -108,7 +134,9 @@ func (c *Store) AddSchemas(ctx context.Context, schemas *types.Schemas) error {
 	}
 
 	for schema, crd := range schemaStatus {
-		if _, ok := ready[crd.Name]; !ok {
+		if crd, ok := ready[crd.Name]; ok {
+			schemaStatus[schema] = crd
+		} else {
 			if err := c.waitCRD(ctx, crd.Name, schema, schemaStatus); err != nil {
 				return err
 			}
@@ -171,24 +199,22 @@ func (c *Store) waitCRD(ctx context.Context, crdName string, schema *types.Schem
 	})
 }
 
-func (c *Store) createCRD(schema *types.Schema, ready map[string]apiext.CustomResourceDefinition) (*apiext.CustomResourceDefinition, error) {
+func (c *Store) createCRD(schema *types.Schema, ready map[string]*apiext.CustomResourceDefinition) (*apiext.CustomResourceDefinition, error) {
 	plural := strings.ToLower(schema.PluralName)
 	name := strings.ToLower(plural + "." + schema.Version.Group)
 
 	crd, ok := ready[name]
 	if ok {
-		return &crd, nil
+		return crd, nil
 	}
 
-	crd = apiext.CustomResourceDefinition{
+	crd = &apiext.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: apiext.CustomResourceDefinitionSpec{
 			Group:   schema.Version.Group,
 			Version: schema.Version.Version,
-			//Scope:   getScope(schema),
-			Scope: apiext.ClusterScoped,
 			Names: apiext.CustomResourceDefinitionNames{
 				Plural: plural,
 				Kind:   convert.Capitalize(schema.ID),
@@ -196,28 +222,34 @@ func (c *Store) createCRD(schema *types.Schema, ready map[string]apiext.CustomRe
 		},
 	}
 
-	logrus.Infof("Creating CRD %s", name)
-	_, err := c.apiExtClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Create(&crd)
-	if errors.IsAlreadyExists(err) {
-		return &crd, nil
+	if schema.Scope == types.NamespaceScope {
+		crd.Spec.Scope = apiext.NamespaceScoped
+	} else {
+		crd.Spec.Scope = apiext.ClusterScoped
 	}
-	return &crd, err
+
+	logrus.Infof("Creating CRD %s", name)
+	crd, err := c.apiExtClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	if errors.IsAlreadyExists(err) {
+		return crd, nil
+	}
+	return crd, err
 }
 
-func (c *Store) getReadyCRDs() (map[string]apiext.CustomResourceDefinition, error) {
+func (c *Store) getReadyCRDs() (map[string]*apiext.CustomResourceDefinition, error) {
 	list, err := c.apiExtClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	result := map[string]apiext.CustomResourceDefinition{}
+	result := map[string]*apiext.CustomResourceDefinition{}
 
-	for _, crd := range list.Items {
+	for i, crd := range list.Items {
 		for _, cond := range crd.Status.Conditions {
 			switch cond.Type {
 			case apiext.Established:
 				if cond.Status == apiext.ConditionTrue {
-					result[crd.Name] = crd
+					result[crd.Name] = &list.Items[i]
 				}
 			}
 		}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
+	"github.com/rancher/norman/types/definition"
 )
 
 type Move struct {
@@ -64,7 +65,11 @@ func getField(schema *types.Schema, schemas *types.Schemas, target string) (*typ
 			continue
 		}
 
-		subSchema := schemas.Schema(&schema.Version, schema.ResourceFields[part].Type)
+		fieldType := schema.ResourceFields[part].Type
+		if definition.IsArrayType(fieldType) {
+			fieldType = definition.SubType(fieldType)
+		}
+		subSchema := schemas.Schema(&schema.Version, fieldType)
 		if subSchema == nil {
 			return nil, "", types.Field{}, false, fmt.Errorf("failed to find field or schema for %s on %s", part, schema.ID)
 		}

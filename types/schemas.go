@@ -63,7 +63,7 @@ func (s *Schemas) AddSchema(schema *Schema) *Schemas {
 		s.errors = append(s.errors, fmt.Errorf("ID is not set on schema: %v", schema))
 		return s
 	}
-	if schema.Version.Path == "" || schema.Version.Group == "" || schema.Version.Version == "" {
+	if schema.Version.Path == "" || schema.Version.Version == "" {
 		s.errors = append(s.errors, fmt.Errorf("version is not set on schema: %s", schema.ID))
 		return s
 	}
