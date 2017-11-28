@@ -4,6 +4,7 @@ var k8sClientTemplate = `package {{.version.Version}}
 
 import (
 	"sync"
+	"context"
 
 	"github.com/rancher/norman/clientbase"
 	"github.com/rancher/norman/controller"

@@ -8,12 +8,12 @@ import (
 	{{.importPackage}}
 	"github.com/rancher/norman/clientbase"
 	"github.com/rancher/norman/controller"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/label"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -86,7 +86,10 @@ func (l *{{.schema.ID}}Lister) Get(namespace, name string) (*{{.prefix}}{{.schem
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("{{.schema.ID}}"), name)
+		return nil, errors.NewNotFound(schema.GroupResource{
+			Group: {{.schema.CodeName}}GroupVersionKind.Group,
+			Resource: "{{.schema.ID}}",
+		}, name)
 	}
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), nil
 }
