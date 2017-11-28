@@ -3,13 +3,13 @@ package generator
 var controllerTemplate = `package {{.schema.Version.Version}}
 
 import (
-	"sync"
 	"context"
 
 	{{.importPackage}}
 	"github.com/rancher/norman/clientbase"
 	"github.com/rancher/norman/controller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/label"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
