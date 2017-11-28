@@ -40,7 +40,7 @@ func (h *HTMLResponseWriter) Write(apiContext *types.APIContext, code int, obj i
 		headerString := strings.Replace(start, "%SCHEMAS%", apiContext.URLBuilder.Collection(schemaSchema, apiContext.Version), 1)
 		apiContext.Response.Write([]byte(headerString))
 	}
-	h.Body(apiContext, code, obj)
+	h.Body(apiContext, apiContext.Response, obj)
 	if schemaSchema != nil {
 		apiContext.Response.Write(end)
 	}

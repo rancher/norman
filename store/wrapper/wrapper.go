@@ -36,6 +36,28 @@ func (s *StoreWrapper) List(apiContext *types.APIContext, schema *types.Schema, 
 	return apiContext.FilterList(opts, data), nil
 }
 
+func (s *StoreWrapper) Watch(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) (chan map[string]interface{}, error) {
+	c, err := s.store.Watch(apiContext, schema, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(chan map[string]interface{})
+	go func() {
+		for item := range c {
+			item = apiContext.FilterObject(types.QueryOptions{
+				Conditions: apiContext.SubContextAttributeProvider.Query(apiContext, schema),
+			}, item)
+			if item != nil {
+				result <- item
+			}
+		}
+		close(result)
+	}()
+
+	return result, nil
+}
+
 func (s *StoreWrapper) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
 	for key, value := range apiContext.SubContextAttributeProvider.Create(apiContext, schema) {
 		if data == nil {

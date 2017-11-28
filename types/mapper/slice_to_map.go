@@ -52,6 +52,11 @@ func (s SliceToMap) ModifySchema(schema *types.Schema, schemas *types.Schemas) e
 		return err
 	}
 
+	subSchema, subFieldName, _, _, err := getField(schema, schemas, fmt.Sprintf("%s/%s", s.Field, s.Key))
+	if err != nil {
+		return err
+	}
+
 	field := schema.ResourceFields[s.Field]
 	if !definition.IsArrayType(field.Type) {
 		return fmt.Errorf("field %s on %s is not an array", s.Field, schema.ID)
@@ -59,6 +64,8 @@ func (s SliceToMap) ModifySchema(schema *types.Schema, schemas *types.Schemas) e
 
 	field.Type = "map[" + definition.SubType(field.Type) + "]"
 	schema.ResourceFields[s.Field] = field
+
+	delete(subSchema.ResourceFields, subFieldName)
 
 	return nil
 }

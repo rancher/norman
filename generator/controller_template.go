@@ -4,9 +4,9 @@ var controllerTemplate = `package {{.schema.Version.Version}}
 
 import (
 	"sync"
-
 	"context"
 
+	{{.importPackage}}
 	"github.com/rancher/norman/clientbase"
 	"github.com/rancher/norman/controller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +26,11 @@ var (
 	{{.schema.CodeName}}Resource = metav1.APIResource{
 		Name:         "{{.schema.PluralName | toLower}}",
 		SingularName: "{{.schema.ID | toLower}}",
+{{- if eq .schema.Scope "namespace" }}
+		Namespaced:   true,
+{{ else }}
 		Namespaced:   false,
+{{- end }}
 		Kind:         {{.schema.CodeName}}GroupVersionKind.Kind,
 	}
 )
@@ -34,32 +38,69 @@ var (
 type {{.schema.CodeName}}List struct {
 	metav1.TypeMeta   %BACK%json:",inline"%BACK%
 	metav1.ListMeta   %BACK%json:"metadata,omitempty"%BACK%
-	Items             []{{.schema.CodeName}}
+	Items             []{{.prefix}}{{.schema.CodeName}}
 }
 
-type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.schema.CodeName}}) error
+type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.prefix}}{{.schema.CodeName}}) error
+
+type {{.schema.CodeName}}Lister interface {
+	List(namespace string, selector labels.Selector) (ret []*{{.prefix}}{{.schema.CodeName}}, err error)
+	Get(namespace, name string) (*{{.prefix}}{{.schema.CodeName}}, error)
+}
 
 type {{.schema.CodeName}}Controller interface {
 	Informer() cache.SharedIndexInformer
+	Lister() {{.schema.CodeName}}Lister
 	AddHandler(handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
+	Sync(ctx context.Context) error
 	Start(ctx context.Context, threadiness int) error
 }
 
 type {{.schema.CodeName}}Interface interface {
-	Create(*{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
-	Get(name string, opts metav1.GetOptions) (*{{.schema.CodeName}}, error)
-	Update(*{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
+    ObjectClient() *clientbase.ObjectClient
+	Create(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
+	Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
+	Update(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Delete(name string, options *metav1.DeleteOptions) error
-	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
+	List(opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
 }
 
+type {{.schema.ID}}Lister struct {
+	controller *{{.schema.ID}}Controller
+}
+
+func (l *{{.schema.ID}}Lister) List(namespace string, selector labels.Selector) (ret []*{{.prefix}}{{.schema.CodeName}}, err error) {
+	err = cache.ListAllByNamespace(l.controller.Informer().GetIndexer(), namespace, selector, func(obj interface{}) {
+		ret = append(ret, obj.(*{{.prefix}}{{.schema.CodeName}}))
+	})
+	return
+}
+
+func (l *{{.schema.ID}}Lister) Get(namespace, name string) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	obj, exists, err := l.controller.Informer().GetIndexer().GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(v1.Resource("{{.schema.ID}}"), name)
+	}
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), nil
+}
+
 type {{.schema.ID}}Controller struct {
 	controller.GenericController
 }
+
+func (c *{{.schema.ID}}Controller) Lister() {{.schema.CodeName}}Lister {
+	return &{{.schema.ID}}Lister{
+		controller: c,
+	}
+}
+
 
 func (c *{{.schema.ID}}Controller) AddHandler(handler {{.schema.CodeName}}HandlerFunc) {
 	c.GenericController.AddHandler(func(key string) error {
@@ -70,7 +111,7 @@ func (c *{{.schema.ID}}Controller) AddHandler(handler {{.schema.CodeName}}Handle
 		if !exists {
 			return handler(key, nil)
 		}
-		return handler(key, obj.(*{{.schema.CodeName}}))
+		return handler(key, obj.(*{{.prefix}}{{.schema.CodeName}}))
 	})
 }
 
@@ -78,7 +119,7 @@ type {{.schema.ID}}Factory struct {
 }
 
 func (c {{.schema.ID}}Factory) Object() runtime.Object {
-	return &{{.schema.CodeName}}{}
+	return &{{.prefix}}{{.schema.CodeName}}{}
 }
 
 func (c {{.schema.ID}}Factory) List() runtime.Object {
@@ -102,6 +143,7 @@ func (s *{{.schema.ID}}Client) Controller() {{.schema.CodeName}}Controller {
 	}
 
 	s.client.{{.schema.ID}}Controllers[s.ns] = c
+    s.client.starters = append(s.client.starters, c)
 
 	return c
 }
@@ -113,28 +155,32 @@ type {{.schema.ID}}Client struct {
 	controller   {{.schema.CodeName}}Controller
 }
 
-func (s *{{.schema.ID}}Client) Create(o *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error) {
+func (s *{{.schema.ID}}Client) ObjectClient() *clientbase.ObjectClient {
+	return s.objectClient
+}
+
+func (s *{{.schema.ID}}Client) Create(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
 	obj, err := s.objectClient.Create(o)
-	return obj.(*{{.schema.CodeName}}), err
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
 
-func (s *{{.schema.ID}}Client) Get(name string, opts metav1.GetOptions) (*{{.schema.CodeName}}, error) {
+func (s *{{.schema.ID}}Client) Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error) {
 	obj, err := s.objectClient.Get(name, opts)
-	return obj.(*{{.schema.CodeName}}), err
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
 
-func (s *{{.schema.ID}}Client) Update(o *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error) {
+func (s *{{.schema.ID}}Client) Update(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
 	obj, err := s.objectClient.Update(o.Name, o)
-	return obj.(*{{.schema.CodeName}}), err
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
 
 func (s *{{.schema.ID}}Client) Delete(name string, options *metav1.DeleteOptions) error {
 	return s.objectClient.Delete(name, options)
 }
 
-func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
+func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error) {
 	obj, err := s.objectClient.List(opts)
-	return obj.(*{{.schema.CodeName}}List), err
+	return obj.(*{{.prefix}}{{.schema.CodeName}}List), err
 }
 
 func (s *{{.schema.ID}}Client) Watch(opts metav1.ListOptions) (watch.Interface, error) {

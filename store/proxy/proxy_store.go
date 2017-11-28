@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	ejson "encoding/json"
 	"strings"
 
 	"github.com/rancher/norman/types"
@@ -8,7 +9,14 @@ import (
 	"github.com/rancher/norman/types/mapper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/runtime/serializer/streaming"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	restclientwatch "k8s.io/client-go/rest/watch"
 )
 
 type Store struct {
@@ -61,13 +69,58 @@ func (p *Store) List(apiContext *types.APIContext, schema *types.Schema, opt typ
 	return result, nil
 }
 
+func (p *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) (chan map[string]interface{}, error) {
+	namespace := getNamespace(apiContext, opt)
+
+	req := p.common(namespace, p.k8sClient.Get())
+	req.VersionedParams(&metav1.ListOptions{
+		Watch: true,
+	}, dynamic.VersionedParameterEncoderWithV1Fallback)
+
+	body, err := req.Stream()
+	if err != nil {
+		return nil, err
+	}
+
+	framer := json.Framer.NewFrameReader(body)
+	decoder := streaming.NewDecoder(framer, &unstructuredDecoder{})
+	watcher := watch.NewStreamWatcher(restclientwatch.NewDecoder(decoder, &unstructuredDecoder{}))
+
+	go func() {
+		<-apiContext.Request.Context().Done()
+		watcher.Stop()
+	}()
+
+	result := make(chan map[string]interface{})
+	go func() {
+		for event := range watcher.ResultChan() {
+			data := event.Object.(*unstructured.Unstructured)
+			p.fromInternal(schema, data.Object)
+			result <- data.Object
+		}
+		close(result)
+	}()
+
+	return result, nil
+}
+
+type unstructuredDecoder struct {
+}
+
+func (d *unstructuredDecoder) Decode(data []byte, defaults *schema.GroupVersionKind, into runtime.Object) (runtime.Object, *schema.GroupVersionKind, error) {
+	if into == nil {
+		into = &unstructured.Unstructured{}
+	}
+	return into, defaults, ejson.Unmarshal(data, &into)
+}
+
 func getNamespace(apiContext *types.APIContext, opt types.QueryOptions) string {
-	if val, ok := apiContext.SubContext["namespace"]; ok {
+	if val, ok := apiContext.SubContext["namespaces"]; ok {
 		return convert.ToString(val)
 	}
 
 	for _, condition := range opt.Conditions {
-		if condition.Field == "namespace" && condition.Value != "" {
+		if condition.Field == "namespaceId" && condition.Value != "" {
 			return condition.Value
 		}
 	}
@@ -76,14 +129,14 @@ func getNamespace(apiContext *types.APIContext, opt types.QueryOptions) string {
 }
 
 func (p *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
-	namespace, _ := data["namespace"].(string)
+	namespace, _ := data["namespaceId"].(string)
 	p.toInternal(schema.Mapper, data)
 
 	name, _ := mapper.GetValueN(data, "metadata", "name").(string)
 	if name == "" {
 		generated, _ := mapper.GetValueN(data, "metadata", "generateName").(string)
 		if generated == "" {
-			mapper.PutValue(data, schema.ID+"-", "metadata", "generateName")
+			mapper.PutValue(data, strings.ToLower(schema.ID+"-"), "metadata", "generateName")
 		}
 	}
 

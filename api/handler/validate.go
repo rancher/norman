@@ -15,9 +15,12 @@ func ParseAndValidateBody(apiContext *types.APIContext) (map[string]interface{},
 	b := builder.NewBuilder(apiContext)
 
 	data, err = b.Construct(apiContext.Schema, data, builder.Create)
-	validator := apiContext.Schema.Validator
-	if validator != nil {
-		if err := validator(apiContext, data); err != nil {
+	if err != nil {
+		return nil, err
+	}
+
+	if apiContext.Schema.Validator != nil {
+		if err := apiContext.Schema.Validator(apiContext, data); err != nil {
 			return nil, err
 		}
 	}

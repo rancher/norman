@@ -78,7 +78,7 @@ func parseSubContext(parts []string, apiRequest *types.APIContext) []string {
 	apiRequest.SubContext = map[string]string{}
 	apiRequest.Attributes = map[string]interface{}{}
 
-	for len(parts) > 3 && apiRequest.Version != nil {
+	for len(parts) > 3 && apiRequest.Version != nil && parts[3] != "" {
 		resourceType := parts[1]
 		resourceID := parts[2]
 
