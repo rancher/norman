@@ -232,7 +232,11 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 		return err
 	}
 
-	return generateK8sClient(k8sDir, version, controllers)
+	if err := generateK8sClient(k8sDir, version, controllers); err != nil {
+		return err
+	}
+
+	return gofmt(baseDir, k8sOutputPackage)
 }
 
 func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage string) error {
