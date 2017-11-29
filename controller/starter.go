@@ -12,7 +12,7 @@ type Starter interface {
 }
 
 func Sync(ctx context.Context, starters ...Starter) error {
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, _ := errgroup.WithContext(ctx)
 	for _, starter := range starters {
 		func(starter Starter) {
 			eg.Go(func() error {

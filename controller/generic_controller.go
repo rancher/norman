@@ -98,13 +98,14 @@ func (g *genericController) sync(ctx context.Context) error {
 		DeleteFunc: g.queueObject,
 	})
 
-	logrus.Infof("Starting %s Controller", g.name)
+	logrus.Infof("Syncing %s Controller", g.name)
 
 	go g.informer.Run(ctx.Done())
 
 	if !cache.WaitForCacheSync(ctx.Done(), g.informer.HasSynced) {
 		return fmt.Errorf("failed to sync controller %s", g.name)
 	}
+	logrus.Infof("Syncing %s Controller Done", g.name)
 
 	g.synced = true
 	return nil
