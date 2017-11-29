@@ -134,8 +134,8 @@ func (c *Store) AddSchemas(ctx context.Context, schemas ...*types.Schema) error 
 	}
 
 	for schema, crd := range schemaStatus {
-		if crd, ok := ready[crd.Name]; ok {
-			schemaStatus[schema] = crd
+		if readyCrd, ok := ready[crd.Name]; ok {
+			schemaStatus[schema] = readyCrd
 		} else {
 			if err := c.waitCRD(ctx, crd.Name, schema, schemaStatus); err != nil {
 				return err
