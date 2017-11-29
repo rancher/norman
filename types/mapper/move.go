@@ -8,6 +8,7 @@ import (
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
 	"github.com/rancher/norman/types/definition"
+	"github.com/rancher/norman/types/values"
 )
 
 type Move struct {
@@ -17,14 +18,14 @@ type Move struct {
 }
 
 func (m Move) FromInternal(data map[string]interface{}) {
-	if v, ok := RemoveValue(data, strings.Split(m.From, "/")...); ok {
-		PutValue(data, v, strings.Split(m.To, "/")...)
+	if v, ok := values.RemoveValue(data, strings.Split(m.From, "/")...); ok {
+		values.PutValue(data, v, strings.Split(m.To, "/")...)
 	}
 }
 
 func (m Move) ToInternal(data map[string]interface{}) {
-	if v, ok := RemoveValue(data, strings.Split(m.To, "/")...); ok {
-		PutValue(data, v, strings.Split(m.From, "/")...)
+	if v, ok := values.RemoveValue(data, strings.Split(m.To, "/")...); ok {
+		values.PutValue(data, v, strings.Split(m.From, "/")...)
 	}
 }
 

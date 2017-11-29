@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/values"
 )
 
 type SetValue struct {
@@ -15,24 +16,24 @@ type SetValue struct {
 }
 
 func (s SetValue) FromInternal(data map[string]interface{}) {
-	v, ok := GetValue(data, strings.Split(s.From, "/")...)
+	v, ok := values.GetValue(data, strings.Split(s.From, "/")...)
 	if !ok {
 		return
 	}
 
 	if v == s.IfEq {
-		PutValue(data, s.Value, strings.Split(s.To, "/")...)
+		values.PutValue(data, s.Value, strings.Split(s.To, "/")...)
 	}
 }
 
 func (s SetValue) ToInternal(data map[string]interface{}) {
-	v, ok := GetValue(data, strings.Split(s.To, "/")...)
+	v, ok := values.GetValue(data, strings.Split(s.To, "/")...)
 	if !ok {
 		return
 	}
 
 	if v == s.Value {
-		PutValue(data, s.IfEq, strings.Split(s.From, "/")...)
+		values.PutValue(data, s.IfEq, strings.Split(s.From, "/")...)
 	}
 }
 

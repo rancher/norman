@@ -1,4 +1,4 @@
-package mapper
+package values
 
 func RemoveValue(data map[string]interface{}, keys ...string) (interface{}, bool) {
 	for i, key := range keys {

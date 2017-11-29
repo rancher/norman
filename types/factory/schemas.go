@@ -8,11 +8,15 @@ import (
 
 func Schemas(version *types.APIVersion) *types.Schemas {
 	s := types.NewSchemas()
-	s.DefaultMappers = []types.Mapper{
-		mapper.NewObject(),
+	s.DefaultMappers = func() []types.Mapper {
+		return []types.Mapper{
+			mapper.NewObject(),
+		}
 	}
-	s.DefaultPostMappers = []types.Mapper{
-		&mapper.RenameReference{},
+	s.DefaultPostMappers = func() []types.Mapper {
+		return []types.Mapper{
+			&mapper.RenameReference{},
+		}
 	}
 	s.AddMapperForType(version, v1.ObjectMeta{}, mapper.NewMetadataMapper())
 	return s

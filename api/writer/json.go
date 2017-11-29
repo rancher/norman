@@ -10,6 +10,7 @@ import (
 	"github.com/rancher/norman/parse"
 	"github.com/rancher/norman/parse/builder"
 	"github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/definition"
 	"github.com/sirupsen/logrus"
 )
 
@@ -90,7 +91,7 @@ func toString(val interface{}) string {
 }
 
 func (j *JSONResponseWriter) convert(b *builder.Builder, context *types.APIContext, input map[string]interface{}) *types.RawResource {
-	schema := context.Schemas.Schema(context.Version, fmt.Sprint(input["type"]))
+	schema := context.Schemas.Schema(context.Version, definition.GetFullType(input))
 	if schema == nil {
 		return nil
 	}

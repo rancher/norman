@@ -1,6 +1,10 @@
 package definition
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/rancher/norman/types/convert"
+)
 
 func IsMapType(fieldType string) bool {
 	return strings.HasPrefix(fieldType, "map[") && strings.HasSuffix(fieldType, "]")
@@ -25,4 +29,13 @@ func SubType(fieldType string) string {
 	}
 
 	return fieldType[i+1 : len(fieldType)-1]
+}
+
+func GetType(data map[string]interface{}) string {
+	parts := strings.Split(GetFullType(data), "/")
+	return parts[len(parts)-1]
+}
+
+func GetFullType(data map[string]interface{}) string {
+	return convert.ToString(data["type"])
 }

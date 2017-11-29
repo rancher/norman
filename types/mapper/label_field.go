@@ -1,13 +1,16 @@
 package mapper
 
-import "github.com/rancher/norman/types"
+import (
+	"github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/values"
+)
 
 type LabelField struct {
 	Field string
 }
 
 func (e LabelField) FromInternal(data map[string]interface{}) {
-	v, ok := RemoveValue(data, "labels", "io.cattle.field."+e.Field)
+	v, ok := values.RemoveValue(data, "labels", "io.cattle.field."+e.Field)
 	if ok {
 		data[e.Field] = v
 	}
@@ -16,7 +19,7 @@ func (e LabelField) FromInternal(data map[string]interface{}) {
 func (e LabelField) ToInternal(data map[string]interface{}) {
 	v, ok := data[e.Field]
 	if ok {
-		PutValue(data, v, "labels", "io.cattle.field."+e.Field)
+		values.PutValue(data, v, "labels", "io.cattle.field."+e.Field)
 	}
 }
 
