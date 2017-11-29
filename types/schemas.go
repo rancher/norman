@@ -15,12 +15,14 @@ type SchemaCollection struct {
 
 type SchemaInitFunc func(*Schemas) *Schemas
 
+type MappersFactory func() []Mapper
+
 type Schemas struct {
 	schemasByPath       map[string]map[string]*Schema
 	schemasBySubContext map[string]*Schema
 	mappers             map[string]map[string][]Mapper
-	DefaultMappers      []Mapper
-	DefaultPostMappers  []Mapper
+	DefaultMappers      MappersFactory
+	DefaultPostMappers  MappersFactory
 	versions            []APIVersion
 	schemas             []*Schema
 	errors              []error

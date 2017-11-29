@@ -6,7 +6,7 @@ import (
 
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
-	"github.com/rancher/norman/types/mapper"
+	"github.com/rancher/norman/types/values"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +41,11 @@ func NewProxyStore(k8sClient rest.Interface,
 }
 
 func (p *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
+	_, result, err := p.byID(apiContext, schema, id)
+	return result, err
+}
+
+func (p *Store) byID(apiContext *types.APIContext, schema *types.Schema, id string) (string, map[string]interface{}, error) {
 	namespace, id := splitID(id)
 
 	req := p.common(namespace, p.k8sClient.Get()).
@@ -132,11 +137,11 @@ func (p *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 	namespace, _ := data["namespaceId"].(string)
 	p.toInternal(schema.Mapper, data)
 
-	name, _ := mapper.GetValueN(data, "metadata", "name").(string)
+	name, _ := values.GetValueN(data, "metadata", "name").(string)
 	if name == "" {
-		generated, _ := mapper.GetValueN(data, "metadata", "generateName").(string)
+		generated, _ := values.GetValueN(data, "metadata", "generateName").(string)
 		if generated == "" {
-			mapper.PutValue(data, strings.ToLower(schema.ID+"-"), "metadata", "generateName")
+			values.PutValue(data, strings.ToLower(schema.ID+"-"), "metadata", "generateName")
 		}
 	}
 
@@ -145,7 +150,8 @@ func (p *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 			Object: data,
 		})
 
-	return p.singleResult(schema, req)
+	_, result, err := p.singleResult(schema, req)
+	return result, err
 }
 
 func (p *Store) toInternal(mapper types.Mapper, data map[string]interface{}) {
@@ -162,7 +168,7 @@ func (p *Store) toInternal(mapper types.Mapper, data map[string]interface{}) {
 }
 
 func (p *Store) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
-	existing, err := p.ByID(apiContext, schema, id)
+	resourceVersion, existing, err := p.byID(apiContext, schema, id)
 	if err != nil {
 		return data, nil
 	}
@@ -174,13 +180,16 @@ func (p *Store) Update(apiContext *types.APIContext, schema *types.Schema, data 
 	p.toInternal(schema.Mapper, existing)
 	namespace, id := splitID(id)
 
+	values.PutValue(existing, resourceVersion, "metadata", "resourceVersion")
+
 	req := p.common(namespace, p.k8sClient.Put()).
 		Body(&unstructured.Unstructured{
 			Object: existing,
 		}).
 		Name(id)
 
-	return p.singleResult(schema, req)
+	_, result, err := p.singleResult(schema, req)
+	return result, err
 }
 
 func (p *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id string) error {
@@ -196,15 +205,16 @@ func (p *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id st
 	return req.Do().Error()
 }
 
-func (p *Store) singleResult(schema *types.Schema, req *rest.Request) (map[string]interface{}, error) {
+func (p *Store) singleResult(schema *types.Schema, req *rest.Request) (string, map[string]interface{}, error) {
 	result := &unstructured.Unstructured{}
 	err := req.Do().Into(result)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
+	version := result.GetResourceVersion()
 	p.fromInternal(schema, result.Object)
-	return result.Object, nil
+	return version, result.Object, nil
 }
 
 func splitID(id string) (string, string) {

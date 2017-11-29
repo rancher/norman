@@ -8,6 +8,7 @@ import (
 	"github.com/rancher/norman/api"
 	"github.com/rancher/norman/store/crd"
 	"github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/factory"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -29,7 +30,7 @@ var (
 		Path:    "/example/v1",
 	}
 
-	Schemas = types.NewSchemas()
+	Schemas = factory.Schemas(&version)
 )
 
 func main() {

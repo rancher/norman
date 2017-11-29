@@ -63,7 +63,7 @@ type {{.schema.CodeName}}Interface interface {
 	Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Update(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Delete(name string, options *metav1.DeleteOptions) error
-	List(opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error)
+	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
@@ -181,9 +181,9 @@ func (s *{{.schema.ID}}Client) Delete(name string, options *metav1.DeleteOptions
 	return s.objectClient.Delete(name, options)
 }
 
-func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error) {
+func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
 	obj, err := s.objectClient.List(opts)
-	return obj.(*{{.prefix}}{{.schema.CodeName}}List), err
+	return obj.(*{{.schema.CodeName}}List), err
 }
 
 func (s *{{.schema.ID}}Client) Watch(opts metav1.ListOptions) (watch.Interface, error) {

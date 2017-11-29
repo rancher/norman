@@ -113,6 +113,10 @@ func (b *Builder) checkDefaultAndRequired(schema *types.Schema, input map[string
 				}
 			}
 		}
+
+		if op == List && fieldMatchesOp(field, List) && definition.IsReferenceType(field.Type) && !hasKey {
+			result[fieldName] = nil
+		}
 	}
 
 	return nil
@@ -264,7 +268,7 @@ func (b *Builder) convertReferenceType(fieldType string, value interface{}) (str
 func (b *Builder) convertArray(fieldType string, value interface{}, op Operation) ([]interface{}, error) {
 	if strSliceValue, ok := value.([]string); ok {
 		// Form data will be []string
-		result := []interface{}{}
+		var result []interface{}
 		for _, value := range strSliceValue {
 			result = append(result, value)
 		}
