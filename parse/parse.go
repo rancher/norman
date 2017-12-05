@@ -2,11 +2,11 @@ package parse
 
 import (
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
 	"github.com/rancher/norman/api/builtin"
-	"github.com/rancher/norman/httperror"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/urlbuilder"
 )
@@ -23,20 +23,83 @@ var (
 	}
 )
 
+type ParsedURL struct {
+	Version          string
+	Type             string
+	ID               string
+	Link             string
+	Method           string
+	Action           string
+	SubContext       map[string]string
+	SubContextPrefix string
+}
+
 type ResolverFunc func(typeName string, context *types.APIContext) error
 
-func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, resolverFunc ResolverFunc) (*types.APIContext, error) {
+type URLParser func(schema *types.Schemas, url *url.URL) (ParsedURL, error)
+
+func DefaultURLParser(schemas *types.Schemas, url *url.URL) (ParsedURL, error) {
+	result := ParsedURL{}
+
+	version := Version(schemas, url.Path)
+	if version == nil {
+		return result, nil
+	}
+
+	path := url.Path
+	path = multiSlashRegexp.ReplaceAllString(path, "/")
+
+	parts := strings.SplitN(path[len(version.Path):], "/", 4)
+	prefix, parts, subContext := parseSubContext(version, parts)
+
+	result.Version = version.Path
+	result.SubContext = subContext
+	result.SubContextPrefix = prefix
+	result.Action, result.Method = parseAction(url)
+
+	result.Type = safeIndex(parts, 1)
+	result.ID = safeIndex(parts, 2)
+	result.Link = safeIndex(parts, 3)
+
+	return result, nil
+}
+
+func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, urlParser URLParser, resolverFunc ResolverFunc) (*types.APIContext, error) {
 	var err error
 
 	result := &types.APIContext{
-		Request:  req,
-		Response: rw,
+		Schemas:        schemas,
+		Request:        req,
+		Response:       rw,
+		Method:         parseMethod(req),
+		ResponseFormat: parseResponseFormat(req),
 	}
 
+	result.URLBuilder, _ = urlbuilder.New(req, types.APIVersion{}, schemas)
+
 	// The response format is guarenteed to be set even in the event of an error
-	result.ResponseFormat = parseResponseFormat(req)
-	result.Version = parseVersion(schemas, req.URL.Path)
-	result.Schemas = schemas
+	parsedURL, err := urlParser(schemas, req.URL)
+	// wait to check error, want to set as much as possible
+
+	result.SubContext = parsedURL.SubContext
+	result.Type = parsedURL.Type
+	result.ID = parsedURL.ID
+	result.Link = parsedURL.Link
+	result.Action = parsedURL.Action
+	if parsedURL.Method != "" {
+		result.Method = parsedURL.Method
+	}
+
+	for i, version := range schemas.Versions() {
+		if version.Path == parsedURL.Version {
+			result.Version = &schemas.Versions()[i]
+			break
+		}
+	}
+
+	if err != nil {
+		return result, err
+	}
 
 	if result.Version == nil {
 		result.Method = http.MethodGet
@@ -46,15 +109,16 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, re
 		return result, nil
 	}
 
-	result.Method = parseMethod(req)
-	result.Action, result.Method = parseAction(req, result.Method)
-
 	result.URLBuilder, err = urlbuilder.New(req, *result.Version, result.Schemas)
 	if err != nil {
 		return result, err
 	}
 
-	if err := parsePath(result, req, resolverFunc); err != nil {
+	if parsedURL.SubContextPrefix != "" {
+		result.URLBuilder.SetSubContext(parsedURL.SubContextPrefix)
+	}
+
+	if err := resolverFunc(result.Type, result); err != nil {
 		return result, err
 	}
 
@@ -66,6 +130,8 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, re
 		return result, nil
 	}
 
+	result.Type = result.Schema.ID
+
 	if err := ValidateMethod(result); err != nil {
 		return result, err
 	}
@@ -73,33 +139,24 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, re
 	return result, nil
 }
 
-func parseSubContext(parts []string, apiRequest *types.APIContext) []string {
+func parseSubContext(version *types.APIVersion, parts []string) (string, []string, map[string]string) {
 	subContext := ""
-	apiRequest.SubContext = map[string]string{}
-	apiRequest.Attributes = map[string]interface{}{}
+	result := map[string]string{}
 
-	for len(parts) > 3 && apiRequest.Version != nil && parts[3] != "" {
+	for len(parts) > 3 && version != nil && parts[3] != "" {
 		resourceType := parts[1]
 		resourceID := parts[2]
 
-		if !apiRequest.Version.SubContexts[resourceType] {
+		if !version.SubContexts[resourceType] {
 			break
 		}
 
-		if apiRequest.ReferenceValidator != nil && !apiRequest.ReferenceValidator.Validate(resourceType, resourceID) {
-			return parts
-		}
-
-		apiRequest.SubContext[resourceType] = resourceID
+		result[resourceType] = resourceID
 		subContext = subContext + "/" + resourceType + "/" + resourceID
 		parts = append(parts[:1], parts[3:]...)
 	}
 
-	if subContext != "" {
-		apiRequest.URLBuilder.SetSubContext(subContext)
-	}
-
-	return parts
+	return subContext, parts, result
 }
 
 func DefaultResolver(typeName string, apiContext *types.APIContext) error {
@@ -117,50 +174,6 @@ func DefaultResolver(typeName string, apiContext *types.APIContext) error {
 	}
 
 	apiContext.Schema = schema
-	return nil
-}
-
-func parsePath(apiRequest *types.APIContext, request *http.Request, resolverFunc ResolverFunc) error {
-	if apiRequest.Version == nil {
-		return nil
-	}
-
-	path := request.URL.Path
-	path = multiSlashRegexp.ReplaceAllString(path, "/")
-
-	versionPrefix := apiRequest.Version.Path
-	if !strings.HasPrefix(path, versionPrefix) {
-		return nil
-	}
-
-	parts := strings.Split(path[len(versionPrefix):], "/")
-	parts = parseSubContext(parts, apiRequest)
-
-	if len(parts) > 4 {
-		return httperror.NewAPIError(httperror.NotFound, "No handler for path")
-	}
-
-	typeName := safeIndex(parts, 1)
-	id := safeIndex(parts, 2)
-	link := safeIndex(parts, 3)
-
-	if err := resolverFunc(typeName, apiRequest); err != nil {
-		return err
-	}
-
-	if apiRequest.Schema == nil {
-		return nil
-	}
-
-	apiRequest.Type = apiRequest.Schema.ID
-
-	if id == "" {
-		return nil
-	}
-
-	apiRequest.ID = id
-	apiRequest.Link = link
-
 	return nil
 }
 
@@ -198,20 +211,16 @@ func parseMethod(req *http.Request) string {
 	return method
 }
 
-func parseAction(req *http.Request, method string) (string, string) {
-	if req.Method != http.MethodPost {
-		return "", method
-	}
-
-	action := req.URL.Query().Get("action")
+func parseAction(url *url.URL) (string, string) {
+	action := url.Query().Get("action")
 	if action == "remove" {
 		return "", http.MethodDelete
 	}
 
-	return action, method
+	return action, ""
 }
 
-func parseVersion(schemas *types.Schemas, path string) *types.APIVersion {
+func Version(schemas *types.Schemas, path string) *types.APIVersion {
 	path = multiSlashRegexp.ReplaceAllString(path, "/")
 	for _, version := range schemas.Versions() {
 		if version.Path == "" {

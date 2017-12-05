@@ -11,7 +11,7 @@ var (
 	Version = types.APIVersion{
 		Group:   "meta.cattle.io",
 		Version: "v1",
-		Path:    "/v1-meta",
+		Path:    "/meta",
 	}
 
 	Schema = types.Schema{

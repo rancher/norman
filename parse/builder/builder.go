@@ -83,8 +83,12 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 	}
 
 	if op == List {
-		result["type"] = input["type"]
-		result["id"] = input["id"]
+		if !convert.IsEmpty(input["type"]) {
+			result["type"] = input["type"]
+		}
+		if !convert.IsEmpty(input["id"]) {
+			result["id"] = input["id"]
+		}
 	}
 
 	return nil

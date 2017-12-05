@@ -135,6 +135,36 @@ func generateType(outputDir string, schema *types.Schema, schemas *types.Schemas
 	})
 }
 
+func generateLifecycle(external bool, outputDir string, schema *types.Schema, schemas *types.Schemas) error {
+	filePath := strings.ToLower("zz_generated_" + addUnderscore(schema.ID) + "_lifecycle_adapter.go")
+	output, err := os.Create(path.Join(outputDir, filePath))
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	typeTemplate, err := template.New("lifecycle.template").
+		Funcs(funcs()).
+		Parse(strings.Replace(lifecycleTemplate, "%BACK%", "`", -1))
+	if err != nil {
+		return err
+	}
+
+	importPackage := ""
+	prefix := ""
+	if external {
+		parts := strings.Split(schema.PkgName, "/vendor/")
+		importPackage = fmt.Sprintf("\"%s\"", parts[len(parts)-1])
+		prefix = schema.Version.Version + "."
+	}
+
+	return typeTemplate.Execute(output, map[string]interface{}{
+		"schema":        schema,
+		"importPackage": importPackage,
+		"prefix":        prefix,
+	})
+}
+
 func generateController(external bool, outputDir string, schema *types.Schema, schemas *types.Schemas) error {
 	filePath := strings.ToLower("zz_generated_" + addUnderscore(schema.ID) + "_controller.go")
 	output, err := os.Create(path.Join(outputDir, filePath))
@@ -226,6 +256,10 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 		if err := generateController(true, k8sDir, schema, schemas); err != nil {
 			return err
 		}
+
+		if err := generateLifecycle(true, k8sDir, schema, schemas); err != nil {
+			return err
+		}
 	}
 
 	if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
@@ -265,6 +299,9 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 			!strings.Contains(schema.PkgName, "/vendor/") {
 			controllers = append(controllers, schema)
 			if err := generateController(false, k8sDir, schema, schemas); err != nil {
+				return err
+			}
+			if err := generateLifecycle(false, k8sDir, schema, schemas); err != nil {
 				return err
 			}
 		}

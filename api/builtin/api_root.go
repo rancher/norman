@@ -112,7 +112,7 @@ func (a *APIRootStore) List(apiContext *types.APIContext, schema *types.Schema, 
 
 func apiVersionToAPIRootMap(version types.APIVersion) map[string]interface{} {
 	return map[string]interface{}{
-		"type": "/v1-meta/schemas/apiRoot",
+		"type": "/meta/schemas/apiRoot",
 		"apiVersion": map[string]interface{}{
 			"version": version.Version,
 			"group":   version.Group,

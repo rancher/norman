@@ -29,6 +29,7 @@ type Server struct {
 	schemas                     *types.Schemas
 	QueryFilter                 types.QueryFilter
 	StoreWrapper                StoreWrapper
+	URLParser                   parse.URLParser
 	Defaults                    Defaults
 }
 
@@ -63,6 +64,7 @@ func NewAPIServer() *Server {
 			ErrorHandler: httperror.ErrorHandler,
 		},
 		StoreWrapper: wrapper.Wrap,
+		URLParser:    parse.DefaultURLParser,
 		QueryFilter:  handler.QueryFilter,
 	}
 
@@ -71,7 +73,7 @@ func NewAPIServer() *Server {
 }
 
 func (s *Server) parser(rw http.ResponseWriter, req *http.Request) (*types.APIContext, error) {
-	ctx, err := parse.Parse(rw, req, s.schemas, s.Resolver)
+	ctx, err := parse.Parse(rw, req, s.schemas, s.URLParser, s.Resolver)
 	ctx.ResponseWriter = s.ResponseWriters[ctx.ResponseFormat]
 	if ctx.ResponseWriter == nil {
 		ctx.ResponseWriter = s.ResponseWriters["json"]

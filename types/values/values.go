@@ -1,5 +1,7 @@
 package values
 
+import "github.com/rancher/norman/types/convert"
+
 func RemoveValue(data map[string]interface{}, keys ...string) (interface{}, bool) {
 	for i, key := range keys {
 		if i == len(keys)-1 {
@@ -11,6 +13,30 @@ func RemoveValue(data map[string]interface{}, keys ...string) (interface{}, bool
 	}
 
 	return nil, false
+}
+
+func GetStringSlice(data map[string]interface{}, keys ...string) ([]string, bool) {
+	val, ok := GetValue(data, keys...)
+	if !ok {
+		return nil, ok
+	}
+
+	slice, typeOk := val.([]string)
+	if typeOk {
+		return slice, typeOk
+	}
+
+	sliceNext, typeOk := val.([]interface{})
+	if !typeOk {
+		return nil, typeOk
+	}
+
+	var result []string
+	for _, item := range sliceNext {
+		result = append(result, convert.ToString(item))
+	}
+
+	return result, true
 }
 
 func GetSlice(data map[string]interface{}, keys ...string) ([]map[string]interface{}, bool) {

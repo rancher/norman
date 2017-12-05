@@ -23,7 +23,7 @@ func ErrorHandler(request *types.APIContext, err error) {
 
 func toError(apiError *APIError) map[string]interface{} {
 	e := map[string]interface{}{
-		"type":    "/v1-meta/schemas/error",
+		"type":    "/meta/schemas/error",
 		"code":    apiError.code.code,
 		"message": apiError.message,
 	}

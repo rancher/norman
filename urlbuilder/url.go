@@ -53,6 +53,14 @@ func (u *urlBuilder) SchemaLink(schema *types.Schema) string {
 	return u.constructBasicURL(schema.Version, "schemas", schema.ID)
 }
 
+func (u *urlBuilder) Link(linkName string, resource *types.RawResource) string {
+	if resource.ID == "" || linkName == "" {
+		return ""
+	}
+
+	return u.constructBasicURL(resource.Schema.Version, resource.Schema.PluralName, resource.ID, strings.ToLower(linkName))
+}
+
 func (u *urlBuilder) ResourceLink(resource *types.RawResource) string {
 	if resource.ID == "" {
 		return ""
