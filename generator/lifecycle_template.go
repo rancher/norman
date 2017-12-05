@@ -9,7 +9,7 @@ import (
 )
 
 type {{.schema.CodeName}}Lifecycle interface {
-	Initialize(obj *{{.prefix}}{{.schema.CodeName}}) error
+	Create(obj *{{.prefix}}{{.schema.CodeName}}) error
 	Remove(obj *{{.prefix}}{{.schema.CodeName}}) error
 	Updated(obj *{{.prefix}}{{.schema.CodeName}}) error
 }
@@ -18,8 +18,8 @@ type {{.schema.ID}}LifecycleAdapter struct {
 	lifecycle {{.schema.CodeName}}Lifecycle
 }
 
-func (w *{{.schema.ID}}LifecycleAdapter) Initialize(obj runtime.Object) error {
-	return w.lifecycle.Initialize(obj.(*{{.prefix}}{{.schema.CodeName}}))
+func (w *{{.schema.ID}}LifecycleAdapter) Create(obj runtime.Object) error {
+	return w.lifecycle.Create(obj.(*{{.prefix}}{{.schema.CodeName}}))
 }
 
 func (w *{{.schema.ID}}LifecycleAdapter) Finalize(obj runtime.Object) error {
