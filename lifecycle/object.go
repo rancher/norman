@@ -9,11 +9,11 @@ import (
 )
 
 var (
-	initialized = "io.cattle.lifecycle.initialized"
+	created = "io.cattle.lifecycle.create"
 )
 
 type ObjectLifecycle interface {
-	Initialize(obj runtime.Object) error
+	Create(obj runtime.Object) error
 	Finalize(obj runtime.Object) error
 	Updated(obj runtime.Object) error
 }
@@ -47,7 +47,7 @@ func (o *objectLifecycleAdapter) sync(key string, obj runtime.Object) error {
 		return err
 	}
 
-	if cont, err := o.initialize(metadata, obj); err != nil || !cont {
+	if cont, err := o.create(metadata, obj); err != nil || !cont {
 		return err
 	}
 
@@ -87,12 +87,12 @@ func (o *objectLifecycleAdapter) finalize(metadata metav1.Object, obj runtime.Ob
 	return false, err
 }
 
-func (o *objectLifecycleAdapter) initializeKey() string {
-	return initialized + "." + o.name
+func (o *objectLifecycleAdapter) createKey() string {
+	return created + "." + o.name
 }
 
-func (o *objectLifecycleAdapter) initialize(metadata metav1.Object, obj runtime.Object) (bool, error) {
-	initialized := o.initializeKey()
+func (o *objectLifecycleAdapter) create(metadata metav1.Object, obj runtime.Object) (bool, error) {
+	initialized := o.createKey()
 
 	if metadata.GetLabels()[initialized] == "true" {
 		return true, nil
@@ -110,7 +110,7 @@ func (o *objectLifecycleAdapter) initialize(metadata metav1.Object, obj runtime.
 
 	metadata.SetFinalizers(append(metadata.GetFinalizers(), o.name))
 	metadata.GetLabels()[initialized] = "true"
-	if err := o.lifecycle.Initialize(obj); err != nil {
+	if err := o.lifecycle.Create(obj); err != nil {
 		return false, err
 	}
 
