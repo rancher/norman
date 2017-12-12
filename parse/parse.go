@@ -105,7 +105,7 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, ur
 		result.Method = http.MethodGet
 		result.URLBuilder, err = urlbuilder.New(req, types.APIVersion{}, result.Schemas)
 		result.Type = "apiRoot"
-		result.Schema = &builtin.APIRoot
+		result.Schema = result.Schemas.Schema(&builtin.Version, "apiRoot")
 		return result, nil
 	}
 
@@ -125,7 +125,7 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, ur
 	if result.Schema == nil {
 		result.Method = http.MethodGet
 		result.Type = "apiRoot"
-		result.Schema = &builtin.APIRoot
+		result.Schema = result.Schemas.Schema(&builtin.Version, "apiRoot")
 		result.ID = result.Version.Path
 		return result, nil
 	}

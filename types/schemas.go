@@ -54,12 +54,12 @@ func (s *Schemas) SubContextSchemas() map[string]*Schema {
 
 func (s *Schemas) AddSchemas(schema *Schemas) *Schemas {
 	for _, schema := range schema.Schemas() {
-		s.AddSchema(schema)
+		s.AddSchema(*schema)
 	}
 	return s
 }
 
-func (s *Schemas) AddSchema(schema *Schema) *Schemas {
+func (s *Schemas) AddSchema(schema Schema) *Schemas {
 	schema.Type = "/meta/schemas/schema"
 	if schema.ID == "" {
 		s.errors = append(s.errors, fmt.Errorf("ID is not set on schema: %v", schema))
@@ -90,12 +90,12 @@ func (s *Schemas) AddSchema(schema *Schema) *Schemas {
 	}
 
 	if _, ok := schemas[schema.ID]; !ok {
-		schemas[schema.ID] = schema
-		s.schemas = append(s.schemas, schema)
+		schemas[schema.ID] = &schema
+		s.schemas = append(s.schemas, &schema)
 	}
 
 	if schema.SubContext != "" {
-		s.schemasBySubContext[schema.SubContext] = schema
+		s.schemasBySubContext[schema.SubContext] = &schema
 	}
 
 	return s

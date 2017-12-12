@@ -7,7 +7,7 @@ import (
 )
 
 func UpdateHandler(apiContext *types.APIContext) error {
-	data, err := ParseAndValidateBody(apiContext)
+	data, err := ParseAndValidateBody(apiContext, false)
 	if err != nil {
 		return err
 	}

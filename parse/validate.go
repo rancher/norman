@@ -26,7 +26,7 @@ func ValidateMethod(request *types.APIContext) error {
 		return httperror.NewAPIError(httperror.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
 	}
 
-	if request.Type == "" || request.Schema == nil {
+	if request.Type == "" || request.Schema == nil || request.Link != "" {
 		return nil
 	}
 

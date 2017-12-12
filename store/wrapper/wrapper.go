@@ -38,7 +38,7 @@ func (s *StoreWrapper) List(apiContext *types.APIContext, schema *types.Schema, 
 
 func (s *StoreWrapper) Watch(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) (chan map[string]interface{}, error) {
 	c, err := s.store.Watch(apiContext, schema, opt)
-	if err != nil {
+	if err != nil || c == nil {
 		return nil, err
 	}
 

@@ -9,7 +9,7 @@ import (
 func CreateHandler(apiContext *types.APIContext) error {
 	var err error
 
-	data, err := ParseAndValidateBody(apiContext)
+	data, err := ParseAndValidateBody(apiContext, true)
 	if err != nil {
 		return err
 	}

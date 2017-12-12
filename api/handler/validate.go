@@ -6,7 +6,7 @@ import (
 	"github.com/rancher/norman/types"
 )
 
-func ParseAndValidateBody(apiContext *types.APIContext) (map[string]interface{}, error) {
+func ParseAndValidateBody(apiContext *types.APIContext, create bool) (map[string]interface{}, error) {
 	data, err := parse.Body(apiContext.Request)
 	if err != nil {
 		return nil, err
@@ -14,7 +14,11 @@ func ParseAndValidateBody(apiContext *types.APIContext) (map[string]interface{},
 
 	b := builder.NewBuilder(apiContext)
 
-	data, err = b.Construct(apiContext.Schema, data, builder.Create)
+	op := builder.Create
+	if !create {
+		op = builder.Update
+	}
+	data, err = b.Construct(apiContext.Schema, data, op)
 	if err != nil {
 		return nil, err
 	}

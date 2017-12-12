@@ -102,17 +102,20 @@ func (s *Server) AddSchemas(schemas *types.Schemas) error {
 			return
 		}
 		for _, schema := range builtin.Schemas.Schemas() {
-			s.setupDefaults(schema)
-			s.schemas.AddSchema(schema)
+			s.addSchema(*schema)
 		}
 	})
 
 	for _, schema := range schemas.Schemas() {
-		s.setupDefaults(schema)
-		s.schemas.AddSchema(schema)
+		s.addSchema(*schema)
 	}
 
 	return s.schemas.Err()
+}
+
+func (s *Server) addSchema(schema types.Schema) {
+	s.setupDefaults(&schema)
+	s.schemas.AddSchema(schema)
 }
 
 func (s *Server) setupDefaults(schema *types.Schema) {
@@ -184,19 +187,19 @@ func (s *Server) handle(rw http.ResponseWriter, req *http.Request) (*types.APICo
 
 	if action == nil && apiRequest.Type != "" {
 		var handler types.RequestHandler
-		switch apiRequest.Method {
-		case http.MethodGet:
+		if apiRequest.Link == "" {
+			switch apiRequest.Method {
+			case http.MethodGet:
+				handler = apiRequest.Schema.ListHandler
+			case http.MethodPost:
+				handler = apiRequest.Schema.CreateHandler
+			case http.MethodPut:
+				handler = apiRequest.Schema.UpdateHandler
+			case http.MethodDelete:
+				handler = apiRequest.Schema.DeleteHandler
+			}
+		} else {
 			handler = apiRequest.Schema.ListHandler
-		case http.MethodPost:
-			handler = apiRequest.Schema.CreateHandler
-		case http.MethodPut:
-			handler = apiRequest.Schema.UpdateHandler
-		case http.MethodDelete:
-			handler = apiRequest.Schema.DeleteHandler
-		}
-
-		if err != nil {
-			return apiRequest, err
 		}
 
 		if handler == nil {

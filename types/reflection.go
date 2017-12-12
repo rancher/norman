@@ -176,7 +176,7 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 	s.setupFilters(schema)
 
 	schema.Mapper = mapper
-	s.AddSchema(schema)
+	s.AddSchema(*schema)
 
 	return schema, s.Err()
 }

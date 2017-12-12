@@ -21,10 +21,9 @@ import (
 )
 
 type Store struct {
-	schemas         []*types.Schema
 	apiExtClientSet apiextclientset.Interface
 	k8sClient       rest.Interface
-	schemaStores    map[*types.Schema]*proxy.Store
+	schemaStores    map[string]*proxy.Store
 }
 
 func NewCRDStoreFromConfig(config rest.Config) (*Store, error) {
@@ -51,12 +50,16 @@ func NewCRDStoreFromClients(apiExtClientSet apiextclientset.Interface, k8sClient
 	return &Store{
 		apiExtClientSet: apiExtClientSet,
 		k8sClient:       k8sClient,
-		schemaStores:    map[*types.Schema]*proxy.Store{},
+		schemaStores:    map[string]*proxy.Store{},
 	}
 }
 
+func key(schema *types.Schema) string {
+	return schema.Version.Path + "/" + schema.ID
+}
+
 func (c *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id string) (map[string]interface{}, error) {
-	store, ok := c.schemaStores[schema]
+	store, ok := c.schemaStores[key(schema)]
 	if !ok {
 		return nil, nil
 	}
@@ -64,7 +67,7 @@ func (c *Store) ByID(apiContext *types.APIContext, schema *types.Schema, id stri
 }
 
 func (c *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id string) error {
-	store, ok := c.schemaStores[schema]
+	store, ok := c.schemaStores[key(schema)]
 	if !ok {
 		return nil
 	}
@@ -72,7 +75,7 @@ func (c *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id st
 }
 
 func (c *Store) List(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) ([]map[string]interface{}, error) {
-	store, ok := c.schemaStores[schema]
+	store, ok := c.schemaStores[key(schema)]
 	if !ok {
 		return nil, nil
 	}
@@ -80,7 +83,7 @@ func (c *Store) List(apiContext *types.APIContext, schema *types.Schema, opt typ
 }
 
 func (c *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt types.QueryOptions) (chan map[string]interface{}, error) {
-	store, ok := c.schemaStores[schema]
+	store, ok := c.schemaStores[key(schema)]
 	if !ok {
 		return nil, nil
 	}
@@ -88,7 +91,7 @@ func (c *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt ty
 }
 
 func (c *Store) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
-	store, ok := c.schemaStores[schema]
+	store, ok := c.schemaStores[key(schema)]
 	if !ok {
 		return nil, nil
 	}
@@ -96,7 +99,7 @@ func (c *Store) Update(apiContext *types.APIContext, schema *types.Schema, data 
 }
 
 func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
-	store, ok := c.schemaStores[schema]
+	store, ok := c.schemaStores[key(schema)]
 	if !ok {
 		return nil, nil
 	}
@@ -105,6 +108,7 @@ func (c *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 
 func (c *Store) AddSchemas(ctx context.Context, schemas ...*types.Schema) error {
 	schemaStatus := map[*types.Schema]*apiext.CustomResourceDefinition{}
+	var allSchemas []*types.Schema
 
 	for _, schema := range schemas {
 		if schema.Store != nil || !contains(schema.CollectionMethods, http.MethodGet) {
@@ -112,7 +116,7 @@ func (c *Store) AddSchemas(ctx context.Context, schemas ...*types.Schema) error 
 		}
 
 		schema.Store = c
-		c.schemas = append(c.schemas, schema)
+		allSchemas = append(allSchemas, schema)
 	}
 
 	ready, err := c.getReadyCRDs()
@@ -120,7 +124,7 @@ func (c *Store) AddSchemas(ctx context.Context, schemas ...*types.Schema) error 
 		return err
 	}
 
-	for _, schema := range c.schemas {
+	for _, schema := range allSchemas {
 		crd, err := c.createCRD(schema, ready)
 		if err != nil {
 			return err
@@ -144,7 +148,7 @@ func (c *Store) AddSchemas(ctx context.Context, schemas ...*types.Schema) error 
 	}
 
 	for schema, crd := range schemaStatus {
-		c.schemaStores[schema] = proxy.NewProxyStore(c.k8sClient,
+		c.schemaStores[key(schema)] = proxy.NewProxyStore(c.k8sClient,
 			[]string{"apis"},
 			crd.Spec.Group,
 			crd.Spec.Version,

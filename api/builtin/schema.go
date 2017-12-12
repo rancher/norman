@@ -16,6 +16,7 @@ var (
 
 	Schema = types.Schema{
 		ID:                "schema",
+		PluralName:        "schemas",
 		Version:           Version,
 		CollectionMethods: []string{"GET"},
 		ResourceMethods:   []string{"GET"},
@@ -75,10 +76,10 @@ var (
 	}
 
 	Schemas = types.NewSchemas().
-		AddSchema(&Schema).
-		AddSchema(&Error).
-		AddSchema(&Collection).
-		AddSchema(&APIRoot)
+		AddSchema(Schema).
+		AddSchema(Error).
+		AddSchema(Collection).
+		AddSchema(APIRoot)
 )
 
 func apiVersionFromMap(schemas *types.Schemas, apiVersion map[string]interface{}) types.APIVersion {
