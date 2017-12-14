@@ -125,10 +125,8 @@ func (o *objectLifecycleAdapter) create(metadata metav1.Object, obj runtime.Obje
 	} else if newObj != nil {
 		_, err = o.objectClient.Update(metadata.GetName(), newObj)
 		return false, err
-	} else {
-		_, err = o.objectClient.Update(metadata.GetName(), obj)
-		return false, err
 	}
 
-	return false, nil
+	_, err = o.objectClient.Update(metadata.GetName(), obj)
+	return false, err
 }
