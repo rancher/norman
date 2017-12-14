@@ -9,25 +9,37 @@ import (
 )
 
 type {{.schema.CodeName}}Lifecycle interface {
-	Create(obj *{{.prefix}}{{.schema.CodeName}}) error
-	Remove(obj *{{.prefix}}{{.schema.CodeName}}) error
-	Updated(obj *{{.prefix}}{{.schema.CodeName}}) error
+	Create(obj *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
+	Remove(obj *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
+	Updated(obj *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 }
 
 type {{.schema.ID}}LifecycleAdapter struct {
 	lifecycle {{.schema.CodeName}}Lifecycle
 }
 
-func (w *{{.schema.ID}}LifecycleAdapter) Create(obj runtime.Object) error {
-	return w.lifecycle.Create(obj.(*{{.prefix}}{{.schema.CodeName}}))
+func (w *{{.schema.ID}}LifecycleAdapter) Create(obj runtime.Object) (runtime.Object, error) {
+	o, err := w.lifecycle.Create(obj.(*{{.prefix}}{{.schema.CodeName}}))
+	if o == nil {
+		return nil, err
+	}
+	return o, err
 }
 
-func (w *{{.schema.ID}}LifecycleAdapter) Finalize(obj runtime.Object) error {
-	return w.lifecycle.Remove(obj.(*{{.prefix}}{{.schema.CodeName}}))
+func (w *{{.schema.ID}}LifecycleAdapter) Finalize(obj runtime.Object) (runtime.Object, error) {
+	o, err := w.lifecycle.Remove(obj.(*{{.prefix}}{{.schema.CodeName}}))
+	if o == nil {
+		return nil, err
+	}
+	return o, err
 }
 
-func (w *{{.schema.ID}}LifecycleAdapter) Updated(obj runtime.Object) error {
-	return w.lifecycle.Updated(obj.(*{{.prefix}}{{.schema.CodeName}}))
+func (w *{{.schema.ID}}LifecycleAdapter) Updated(obj runtime.Object) (runtime.Object, error) {
+	o, err := w.lifecycle.Updated(obj.(*{{.prefix}}{{.schema.CodeName}}))
+	if o == nil {
+		return nil, err
+	}
+	return o, err
 }
 
 func New{{.schema.CodeName}}LifecycleAdapter(name string, client {{.schema.CodeName}}Interface, l {{.schema.CodeName}}Lifecycle) {{.schema.CodeName}}HandlerFunc {
