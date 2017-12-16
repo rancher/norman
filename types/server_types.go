@@ -156,6 +156,6 @@ type Store interface {
 	List(apiContext *APIContext, schema *Schema, opt QueryOptions) ([]map[string]interface{}, error)
 	Create(apiContext *APIContext, schema *Schema, data map[string]interface{}) (map[string]interface{}, error)
 	Update(apiContext *APIContext, schema *Schema, data map[string]interface{}, id string) (map[string]interface{}, error)
-	Delete(apiContext *APIContext, schema *Schema, id string) error
+	Delete(apiContext *APIContext, schema *Schema, id string) (map[string]interface{}, error)
 	Watch(apiContext *APIContext, schema *Schema, opt QueryOptions) (chan map[string]interface{}, error)
 }
