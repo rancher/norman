@@ -149,6 +149,7 @@ type URLBuilder interface {
 	SetSubContext(subContext string)
 	FilterLink(schema *Schema, fieldName string, value string) string
 	Action(action string, resource *RawResource) string
+	ResourceLinkByID(schema *Schema, id string) string
 }
 
 type Store interface {
