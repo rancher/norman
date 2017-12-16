@@ -19,8 +19,8 @@ import (
 
 var (
 	{{.schema.CodeName}}GroupVersionKind = schema.GroupVersionKind{
-		Version: "{{.schema.Version.Version}}",
-		Group:   "{{.schema.Version.Group}}",
+		Version: Version,
+		Group:   GroupName,
 		Kind:    "{{.schema.CodeName}}",
 	}
 	{{.schema.CodeName}}Resource = metav1.APIResource{
@@ -67,6 +67,8 @@ type {{.schema.CodeName}}Interface interface {
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
+	AddSyncHandler(sync {{.schema.CodeName}}HandlerFunc)
+	AddLifecycle(name string, lifecycle {{.schema.CodeName}}Lifecycle)
 }
 
 type {{.schema.ID}}Lister struct {
@@ -198,5 +200,14 @@ func (s *{{.schema.ID}}Client) Watch(opts metav1.ListOptions) (watch.Interface, 
 
 func (s *{{.schema.ID}}Client) DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	return s.objectClient.DeleteCollection(deleteOpts, listOpts)
+}
+
+func (s *{{.schema.ID}}Client) AddSyncHandler(sync {{.schema.CodeName}}HandlerFunc) {
+	s.Controller().AddHandler(sync)
+}
+
+func (s *{{.schema.ID}}Client) AddLifecycle(name string, lifecycle {{.schema.CodeName}}Lifecycle) {
+	sync := New{{.schema.CodeName}}LifecycleAdapter(name, s, lifecycle)
+	s.AddSyncHandler(sync)
 }
 `
