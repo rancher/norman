@@ -195,6 +195,38 @@ func generateController(external bool, outputDir string, schema *types.Schema, s
 	})
 }
 
+func generateScheme(external bool, outputDir string, version *types.APIVersion, schemas []*types.Schema) error {
+	filePath := strings.ToLower("zz_generated_scheme.go")
+	output, err := os.Create(path.Join(outputDir, filePath))
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	typeTemplate, err := template.New("scheme.template").
+		Funcs(funcs()).
+		Parse(strings.Replace(schemeTemplate, "%BACK%", "`", -1))
+	if err != nil {
+		return err
+	}
+
+	names := []string{}
+	for _, schema := range schemas {
+		if !external {
+			names = append(names, schema.CodeName)
+		}
+		if schema.CanList() {
+			names = append(names, schema.CodeName+"List")
+		}
+	}
+
+	return typeTemplate.Execute(output, map[string]interface{}{
+		"version": version,
+		"schemas": schemas,
+		"names":   names,
+	})
+}
+
 func generateK8sClient(outputDir string, version *types.APIVersion, schemas []*types.Schema) error {
 	filePath := strings.ToLower("zz_generated_k8s_client.go")
 	output, err := os.Create(path.Join(outputDir, filePath))
@@ -270,6 +302,10 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 		return err
 	}
 
+	if err := generateScheme(true, k8sDir, version, controllers); err != nil {
+		return err
+	}
+
 	return gofmt(baseDir, k8sOutputPackage)
 }
 
@@ -318,7 +354,13 @@ func Generate(schemas *types.Schemas, cattleOutputPackage, k8sOutputPackage stri
 			return err
 		}
 
-		generateK8sClient(k8sDir, &controllers[0].Version, controllers)
+		if err := generateK8sClient(k8sDir, &controllers[0].Version, controllers); err != nil {
+			return err
+		}
+
+		if err := generateScheme(false, k8sDir, &controllers[0].Version, controllers); err != nil {
+			return err
+		}
 	}
 
 	if err := gofmt(baseDir, k8sOutputPackage); err != nil {
@@ -382,9 +424,9 @@ func deepCopyGen(workDir, pkg string) error {
 					HeaderText:  []byte{},
 					GeneratorFunc: func(c *generator.Context) []generator.Generator {
 						return []generator.Generator{
-							&noInitGenerator{
-								generators.NewGenDeepCopy(arguments.OutputFileBaseName, pkg, nil, true, true),
-							},
+							//&noInitGenerator{
+							generators.NewGenDeepCopy(arguments.OutputFileBaseName, pkg, nil, true, true),
+							//},
 						}
 					},
 					FilterFunc: func(c *generator.Context, t *gengotypes.Type) bool {
