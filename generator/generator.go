@@ -267,7 +267,7 @@ func generateClient(outputDir string, schemas []*types.Schema) error {
 	})
 }
 
-func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage string, objs ...interface{}) error {
+func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage string, nsObjs []interface{}, objs []interface{}) error {
 	baseDir := args.DefaultSourceTree()
 	k8sDir := path.Join(baseDir, k8sOutputPackage)
 
@@ -283,6 +283,23 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 		if err != nil {
 			return err
 		}
+		controllers = append(controllers, schema)
+
+		if err := generateController(true, k8sDir, schema, schemas); err != nil {
+			return err
+		}
+
+		if err := generateLifecycle(true, k8sDir, schema, schemas); err != nil {
+			return err
+		}
+	}
+
+	for _, obj := range nsObjs {
+		schema, err := schemas.Import(version, obj)
+		if err != nil {
+			return err
+		}
+		schema.Scope = types.NamespaceScope
 		controllers = append(controllers, schema)
 
 		if err := generateController(true, k8sDir, schema, schemas); err != nil {

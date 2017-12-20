@@ -26,7 +26,7 @@ type Baz struct {
 var (
 	version = types.APIVersion{
 		Version: "v1",
-		Group:   "io.cattle.core.example",
+		Group:   "example.core.cattle.io",
 		Path:    "/example/v1",
 	}
 
