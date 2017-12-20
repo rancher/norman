@@ -255,7 +255,8 @@ func (w *Reconciliation) Changed(key string, obj runtime.Object) (runtime.Object
 	existingSet := w.children[parentRef]
 
 	if objectSet.Parent != nil {
-		if newObj, err := w.updateParent(parentRef, obj, objectSet.Parent); err != nil {
+		newObj, err := w.updateParent(parentRef, obj, objectSet.Parent)
+		if err != nil {
 			return obj, err
 		}
 		obj = newObj
