@@ -198,6 +198,12 @@ func (s *{{.schema.ID}}Client) Watch(opts metav1.ListOptions) (watch.Interface, 
 	return s.objectClient.Watch(opts)
 }
 
+// Patch applies the patch and returns the patched deployment.
+func (s *{{.schema.ID}}Client) Patch(o *{{.prefix}}{{.schema.CodeName}}, data []byte, subresources ...string) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	obj, err := s.objectClient.Patch(o.Name, o, data, subresources...)
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
+}
+
 func (s *{{.schema.ID}}Client) DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	return s.objectClient.DeleteCollection(deleteOpts, listOpts)
 }
