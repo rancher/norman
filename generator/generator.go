@@ -52,6 +52,8 @@ func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas
 	name := ""
 
 	switch typeName {
+	case "base64":
+		return "string"
 	case "json":
 		return "interface{}"
 	case "boolean":
