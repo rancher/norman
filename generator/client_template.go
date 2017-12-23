@@ -10,7 +10,7 @@ type Client struct {
     clientbase.APIBaseClient
 
 	{{range .schemas}}
-    {{- if . | hasGet }}{{.ID | capitalize}} {{.ID | capitalize}}Operations
+    {{- if . | hasGet }}{{.CodeName}} {{.CodeName}}Operations
 {{end}}{{end}}}
 
 func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
@@ -24,7 +24,7 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
     }
 
     {{range .schemas}}
-    {{- if . | hasGet }}client.{{.ID | capitalize}} = new{{.ID | capitalize}}Client(client)
+    {{- if . | hasGet }}client.{{.CodeName}} = new{{.CodeName}}Client(client)
 {{end}}{{end}}
 	return client, nil
 }
