@@ -42,22 +42,16 @@ func (c Cond) Reason(obj runtime.Object, reason string) {
 
 func (c Cond) Message(obj runtime.Object, message string) {
 	cond := findOrCreateCond(obj, string(c))
-	v := getFieldValue(cond, "Message")
-	if v.IsValid() {
-		v.SetString(message)
-	}
+	getFieldValue(cond, "Message").SetString(message)
 }
 
-func (c Cond) ReasonError(obj runtime.Object, err error) {
+func (c Cond) ReasonAndMessageFromError(obj runtime.Object, err error) {
 	cond := findOrCreateCond(obj, string(c))
+	getFieldValue(cond, "Message").SetString(err.Error())
 	if ce, ok := err.(*conditionError); ok {
 		getFieldValue(cond, "Reason").SetString(ce.reason)
-		v := getFieldValue(cond, "Message")
-		if v.IsValid() {
-			v.SetString(ce.Error())
-		}
 	} else {
-		getFieldValue(cond, "Reason").SetString(err.Error())
+		getFieldValue(cond, "Reason").SetString("Error")
 	}
 	touchTS(cond)
 }
@@ -86,7 +80,7 @@ func (c Cond) Once(obj runtime.Object, f func() (runtime.Object, error)) (runtim
 
 	if err != nil {
 		c.False(obj)
-		c.ReasonError(obj, err)
+		c.ReasonAndMessageFromError(obj, err)
 		return obj, err
 	}
 	c.True(obj)
@@ -102,7 +96,7 @@ func (c Cond) Do(obj runtime.Object, f func() (runtime.Object, error)) (runtime.
 
 	if err != nil {
 		c.False(obj)
-		c.ReasonError(obj, err)
+		c.ReasonAndMessageFromError(obj, err)
 		return obj, err
 	}
 	c.True(obj)
