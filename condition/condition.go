@@ -93,7 +93,7 @@ func (c Cond) Once(obj runtime.Object, f func() (runtime.Object, error)) (runtim
 	return obj, nil
 }
 
-func (c Cond) Do(obj runtime.Object, f func() (runtime.Object, error)) error {
+func (c Cond) Do(obj runtime.Object, f func() (runtime.Object, error)) (runtime.Object, error) {
 	c.Unknown(obj)
 	newObj, err := f()
 	if newObj != nil {
@@ -103,12 +103,12 @@ func (c Cond) Do(obj runtime.Object, f func() (runtime.Object, error)) error {
 	if err != nil {
 		c.False(obj)
 		c.ReasonError(obj, err)
-		return err
+		return obj, err
 	}
 	c.True(obj)
 	c.Reason(obj, "")
 	c.Message(obj, "")
-	return nil
+	return obj, nil
 }
 
 func touchTS(value reflect.Value) {
