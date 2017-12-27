@@ -17,7 +17,7 @@ const (
 )
 
 func ValidateAction(request *types.APIContext) (*types.Action, error) {
-	if request.Action == "" || request.Method != http.MethodPost {
+	if request.Action == "" || request.Link != "" || request.Method != http.MethodPost {
 		return nil, nil
 	}
 

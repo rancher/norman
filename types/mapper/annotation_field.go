@@ -37,8 +37,9 @@ func (e AnnotationField) ToInternal(data map[string]interface{}) {
 				v = string(bytes)
 			}
 		}
-		values.PutValue(data, v, "annotations", "field.cattle.io/"+e.Field)
+		values.PutValue(data, convert.ToString(v), "annotations", "field.cattle.io/"+e.Field)
 	}
+	values.RemoveValue(data, e.Field)
 }
 
 func (e AnnotationField) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
