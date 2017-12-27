@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	authHeaders = []string{
-		"Impersonate-User",
+	userAuthHeader = "Impersonate-User"
+	authHeaders    = []string{
+		userAuthHeader,
 		"Impersonate-Group",
 	}
 )
@@ -51,6 +52,10 @@ func NewProxyStore(k8sClient rest.Interface,
 			"resource": resourcePlural,
 		},
 	}
+}
+
+func (p *Store) getUser(apiContext *types.APIContext) string {
+	return apiContext.Request.Header.Get(userAuthHeader)
 }
 
 func (p *Store) doAuthed(apiContext *types.APIContext, request *rest.Request) rest.Result {
@@ -156,6 +161,8 @@ func getNamespace(apiContext *types.APIContext, opt types.QueryOptions) string {
 func (p *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
 	namespace, _ := data["namespaceId"].(string)
 	p.toInternal(schema.Mapper, data)
+
+	values.PutValue(data, p.getUser(apiContext), "metadata", "annotations", "field.cattle.io/creatorId")
 
 	name, _ := values.GetValueN(data, "metadata", "name").(string)
 	if name == "" {
