@@ -3,7 +3,6 @@ package subscribe
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/gorilla/websocket"
 	"github.com/rancher/norman/api/writer"
@@ -85,7 +84,6 @@ func handler(apiContext *types.APIContext) error {
 
 	jsonWriter := writer.JSONResponseWriter{}
 	for item := range events {
-		fmt.Printf("event %s %s %v\n", item["type"], item["id"], item)
 		messageWriter, err := c.NextWriter(websocket.TextMessage)
 		if err != nil {
 			return err
