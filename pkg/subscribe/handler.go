@@ -115,7 +115,7 @@ func handler(apiContext *types.APIContext) error {
 func streamStore(ctx context.Context, eg *errgroup.Group, apiContext *types.APIContext, schema *types.Schema, result chan map[string]interface{}) {
 	eg.Go(func() error {
 		opts := parse.QueryOptions(apiContext, schema)
-		events, err := schema.Store.Watch(apiContext, schema, opts)
+		events, err := schema.Store.Watch(apiContext, schema, &opts)
 		if err != nil {
 			return err
 		}
