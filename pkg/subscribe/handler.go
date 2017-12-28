@@ -90,13 +90,18 @@ func handler(apiContext *types.APIContext) error {
 		if err != nil {
 			return err
 		}
+
+		header := `{"name":"resource.change","data":`
+		if item[".removed"] == true {
+			header = `{"name":"resource.removed","data":`
+		}
 		schema := apiContext.Schemas.Schema(apiContext.Version, convert.ToString(item["type"]))
 		if schema != nil {
 			buffer := &bytes.Buffer{}
 			if err := jsonWriter.VersionBody(apiContext, &schema.Version, buffer, item); err != nil {
 				return err
 			}
-			if _, err := messageWriter.Write([]byte(`{"name":"resource.change","data":`)); err != nil {
+			if _, err := messageWriter.Write([]byte(header)); err != nil {
 				return err
 			}
 			if _, err := messageWriter.Write(buffer.Bytes()); err != nil {
