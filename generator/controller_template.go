@@ -60,9 +60,11 @@ type {{.schema.CodeName}}Controller interface {
 type {{.schema.CodeName}}Interface interface {
     ObjectClient() *clientbase.ObjectClient
 	Create(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
+	GetNamespace(name, namespace string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Update(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteNamespace(name, namespace string, options *metav1.DeleteOptions) error
 	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
@@ -180,6 +182,11 @@ func (s *{{.schema.ID}}Client) Get(name string, opts metav1.GetOptions) (*{{.pre
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
 
+func (s *{{.schema.ID}}Client) GetNamespace(name, namespace string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	obj, err := s.objectClient.GetNamespace(name, namespace, opts)
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
+}
+
 func (s *{{.schema.ID}}Client) Update(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
 	obj, err := s.objectClient.Update(o.Name, o)
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
@@ -187,6 +194,10 @@ func (s *{{.schema.ID}}Client) Update(o *{{.prefix}}{{.schema.CodeName}}) (*{{.p
 
 func (s *{{.schema.ID}}Client) Delete(name string, options *metav1.DeleteOptions) error {
 	return s.objectClient.Delete(name, options)
+}
+
+func (s *{{.schema.ID}}Client) DeleteNamespace(name, namespace string, options *metav1.DeleteOptions) error {
+	return s.objectClient.DeleteNamespace(name, namespace, options)
 }
 
 func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
