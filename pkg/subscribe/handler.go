@@ -120,29 +120,15 @@ func streamStore(ctx context.Context, eg *errgroup.Group, apiContext *types.APIC
 	eg.Go(func() error {
 		opts := parse.QueryOptions(apiContext, schema)
 		events, err := schema.Store.Watch(apiContext, schema, &opts)
-		if err != nil {
+		if err != nil || events == nil {
 			return err
 		}
 
-		if events == nil {
-			return nil
+		for e := range events {
+			result <- e
 		}
 
-		for {
-			select {
-			case e, ok := <-events:
-				if !ok {
-					return nil
-				}
-				select {
-				case result <- e:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
+		return nil
 	})
 }
 
