@@ -84,14 +84,9 @@ func handler(apiContext *types.APIContext) error {
 
 	jsonWriter := writer.JSONResponseWriter{}
 	for item := range events {
-		messageWriter, err := c.NextWriter(websocket.TextMessage)
-		if err != nil {
-			return err
-		}
-
 		header := `{"name":"resource.change","data":`
 		if item[".removed"] == true {
-			header = `{"name":"resource.removed","data":`
+			header = `{"name":"resource.remove","data":`
 		}
 		schema := apiContext.Schemas.Schema(apiContext.Version, convert.ToString(item["type"]))
 		if schema != nil {
@@ -99,6 +94,12 @@ func handler(apiContext *types.APIContext) error {
 			if err := jsonWriter.VersionBody(apiContext, &schema.Version, buffer, item); err != nil {
 				return err
 			}
+
+			messageWriter, err := c.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return err
+			}
+
 			if _, err := messageWriter.Write([]byte(header)); err != nil {
 				return err
 			}
