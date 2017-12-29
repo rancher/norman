@@ -40,6 +40,24 @@ type Store struct {
 }
 
 func NewProxyStore(k8sClient rest.Interface,
+	prefix []string, group, version, kind, resourcePlural string) types.Store {
+	return &errorStore{
+		Store: &Store{
+			k8sClient:      k8sClient,
+			prefix:         prefix,
+			group:          group,
+			version:        version,
+			kind:           kind,
+			resourcePlural: resourcePlural,
+			authContext: map[string]string{
+				"apiGroup": group,
+				"resource": resourcePlural,
+			},
+		},
+	}
+}
+
+func NewRawProxyStore(k8sClient rest.Interface,
 	prefix []string, group, version, kind, resourcePlural string) *Store {
 	return &Store{
 		k8sClient:      k8sClient,
