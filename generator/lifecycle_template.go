@@ -42,9 +42,9 @@ func (w *{{.schema.ID}}LifecycleAdapter) Updated(obj runtime.Object) (runtime.Ob
 	return o, err
 }
 
-func New{{.schema.CodeName}}LifecycleAdapter(name string, client {{.schema.CodeName}}Interface, l {{.schema.CodeName}}Lifecycle) {{.schema.CodeName}}HandlerFunc {
+func New{{.schema.CodeName}}LifecycleAdapter(name string, clusterScoped bool, client {{.schema.CodeName}}Interface, l {{.schema.CodeName}}Lifecycle) {{.schema.CodeName}}HandlerFunc {
 	adapter := &{{.schema.ID}}LifecycleAdapter{lifecycle: l}
-	syncFn := lifecycle.NewObjectLifecycleAdapter(name, adapter, client.ObjectClient())
+	syncFn := lifecycle.NewObjectLifecycleAdapter(name, clusterScoped, adapter, client.ObjectClient())
 	return func(key string, obj *{{.prefix}}{{.schema.CodeName}}) error {
 		if obj == nil {
 			return syncFn(key, nil)
