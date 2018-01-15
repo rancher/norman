@@ -52,6 +52,7 @@ type {{.schema.CodeName}}Controller interface {
 	Informer() cache.SharedIndexInformer
 	Lister() {{.schema.CodeName}}Lister
 	AddHandler(handler {{.schema.CodeName}}HandlerFunc)
+	AddClusterScopedHandler(clusterName string, handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
 	Sync(ctx context.Context) error
 	Start(ctx context.Context, threadiness int) error
@@ -71,6 +72,8 @@ type {{.schema.CodeName}}Interface interface {
 	Controller() {{.schema.CodeName}}Controller
 	AddSyncHandler(sync {{.schema.CodeName}}HandlerFunc)
 	AddLifecycle(name string, lifecycle {{.schema.CodeName}}Lifecycle)
+	AddClusterScopedSyncHandler(clusterName string, sync {{.schema.CodeName}}HandlerFunc)
+	AddClusterScopedLifecycle(name, clusterName string, lifecycle {{.schema.CodeName}}Lifecycle)
 }
 
 type {{.schema.ID}}Lister struct {
@@ -124,6 +127,24 @@ func (c *{{.schema.ID}}Controller) AddHandler(handler {{.schema.CodeName}}Handle
 		if !exists {
 			return handler(key, nil)
 		}
+		return handler(key, obj.(*{{.prefix}}{{.schema.CodeName}}))
+	})
+}
+
+func (c *{{.schema.ID}}Controller) AddClusterScopedHandler(cluster string, handler {{.schema.CodeName}}HandlerFunc) {
+	c.GenericController.AddHandler(func(key string) error {
+		obj, exists, err := c.Informer().GetStore().GetByKey(key)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return handler(key, nil)
+		}
+
+		if !controller.ObjectInCluster(cluster, obj) {
+			return nil
+		}
+
 		return handler(key, obj.(*{{.prefix}}{{.schema.CodeName}}))
 	})
 }
@@ -226,5 +247,14 @@ func (s *{{.schema.ID}}Client) AddSyncHandler(sync {{.schema.CodeName}}HandlerFu
 func (s *{{.schema.ID}}Client) AddLifecycle(name string, lifecycle {{.schema.CodeName}}Lifecycle) {
 	sync := New{{.schema.CodeName}}LifecycleAdapter(name, s, lifecycle)
 	s.AddSyncHandler(sync)
+}
+
+func (s *{{.schema.ID}}Client) AddClusterScopedSyncHandler(clusterName string, sync {{.schema.CodeName}}HandlerFunc) {
+	s.Controller().AddClusterScopedHandler(clusterName, sync)
+}
+
+func (s *{{.schema.ID}}Client) AddClusterScopedLifecycle(name, clusterName string, lifecycle {{.schema.CodeName}}Lifecycle) {
+	sync := New{{.schema.CodeName}}LifecycleAdapter(name, s, lifecycle)
+	s.AddClusterScopedSyncHandler(name+"_"+clusterName, sync)
 }
 `
