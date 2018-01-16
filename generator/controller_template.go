@@ -51,7 +51,7 @@ type {{.schema.CodeName}}Lister interface {
 type {{.schema.CodeName}}Controller interface {
 	Informer() cache.SharedIndexInformer
 	Lister() {{.schema.CodeName}}Lister
-	AddHandler(handler {{.schema.CodeName}}HandlerFunc)
+	AddHandler(name string, handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
 	Sync(ctx context.Context) error
 	Start(ctx context.Context, threadiness int) error
@@ -69,7 +69,7 @@ type {{.schema.CodeName}}Interface interface {
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
-	AddSyncHandler(sync {{.schema.CodeName}}HandlerFunc)
+	AddHandler(name string, sync {{.schema.CodeName}}HandlerFunc)
 	AddLifecycle(name string, lifecycle {{.schema.CodeName}}Lifecycle)
 }
 
@@ -115,8 +115,8 @@ func (c *{{.schema.ID}}Controller) Lister() {{.schema.CodeName}}Lister {
 }
 
 
-func (c *{{.schema.ID}}Controller) AddHandler(handler {{.schema.CodeName}}HandlerFunc) {
-	c.GenericController.AddHandler(func(key string) error {
+func (c *{{.schema.ID}}Controller) AddHandler(name string, handler {{.schema.CodeName}}HandlerFunc) {
+	c.GenericController.AddHandler(name, func(key string) error {
 		obj, exists, err := c.Informer().GetStore().GetByKey(key)
 		if err != nil {
 			return err
@@ -219,12 +219,12 @@ func (s *{{.schema.ID}}Client) DeleteCollection(deleteOpts *metav1.DeleteOptions
 	return s.objectClient.DeleteCollection(deleteOpts, listOpts)
 }
 
-func (s *{{.schema.ID}}Client) AddSyncHandler(sync {{.schema.CodeName}}HandlerFunc) {
-	s.Controller().AddHandler(sync)
+func (s *{{.schema.ID}}Client) AddHandler(name string, sync {{.schema.CodeName}}HandlerFunc) {
+	s.Controller().AddHandler(name, sync)
 }
 
 func (s *{{.schema.ID}}Client) AddLifecycle(name string, lifecycle {{.schema.CodeName}}Lifecycle) {
 	sync := New{{.schema.CodeName}}LifecycleAdapter(name, s, lifecycle)
-	s.AddSyncHandler(sync)
+	s.AddHandler(name, sync)
 }
 `
