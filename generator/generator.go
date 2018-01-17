@@ -224,7 +224,7 @@ func generateScheme(external bool, outputDir string, version *types.APIVersion, 
 		if !external {
 			names = append(names, schema.CodeName)
 		}
-		if schema.CanList() {
+		if schema.CanList(nil) {
 			names = append(names, schema.CodeName+"List")
 		}
 	}
