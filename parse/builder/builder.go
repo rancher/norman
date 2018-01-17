@@ -162,7 +162,9 @@ func checkFieldCriteria(fieldName string, field types.Field, value interface{}) 
 	}
 
 	if (value == nil || value == "") && !field.Nullable {
-		return httperror.NewFieldAPIError(httperror.NotNullable, fieldName, "")
+		if field.Default == nil {
+			return httperror.NewFieldAPIError(httperror.NotNullable, fieldName, "")
+		}
 	}
 
 	if isNum {
