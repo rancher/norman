@@ -8,6 +8,7 @@ import (
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
 	"github.com/rancher/norman/types/definition"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
@@ -251,7 +252,14 @@ func (b *Builder) convert(fieldType string, value interface{}, op Operation) (in
 	case "string":
 		return convert.ToString(value), nil
 	case "dnsLabel":
-		return convert.ToString(value), nil
+		value := convert.ToString(value)
+		if op == Create || op == Update {
+			if errs := validation.IsDNS1123Subdomain(convert.ToString(value)); len(errs) != 0 {
+				return value, httperror.NewAPIError(httperror.InvalidFormat, fmt.Sprintf("invalid value %s: %s", value,
+					strings.Join(errs, ",")))
+			}
+		}
+		return value, nil
 	case "intOrString":
 		num, err := convert.ToNumber(value)
 		if err == nil {
