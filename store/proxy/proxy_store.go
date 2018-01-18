@@ -142,9 +142,12 @@ func (p *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 func (p *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
 	namespace := getNamespace(apiContext, opt)
 
+	timeout := int64(60 * 60)
 	req := p.common(namespace, p.k8sClient.Get())
 	req.VersionedParams(&metav1.ListOptions{
-		Watch: true,
+		Watch:           true,
+		TimeoutSeconds:  &timeout,
+		ResourceVersion: "0",
 	}, dynamic.VersionedParameterEncoderWithV1Fallback)
 
 	body, err := req.Stream()
