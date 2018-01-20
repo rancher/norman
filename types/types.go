@@ -149,3 +149,7 @@ type Filter struct {
 type ListOpts struct {
 	Filters map[string]interface{}
 }
+
+func (c *Collection) AddAction(apiContext *APIContext, name string) {
+	c.Actions[name] = apiContext.URLBuilder.CollectionAction(apiContext.Schema, nil, name)
+}
