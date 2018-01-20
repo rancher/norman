@@ -64,6 +64,10 @@ func (j *JSONResponseWriter) writeMapSlice(builder *builder.Builder, apiContext 
 		}
 	}
 
+	if apiContext.Schema.CollectionFormatter != nil {
+		apiContext.Schema.CollectionFormatter(apiContext, collection)
+	}
+
 	return collection
 }
 
