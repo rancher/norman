@@ -168,6 +168,7 @@ type ReferenceValidator interface {
 type URLBuilder interface {
 	Current() string
 	Collection(schema *Schema, versionOverride *APIVersion) string
+	CollectionAction(schema *Schema, versionOverride *APIVersion, action string) string
 	SubContextCollection(subContext *Schema, contextName string, schema *Schema) string
 	SchemaLink(schema *Schema) string
 	ResourceLink(resource *RawResource) string
