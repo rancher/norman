@@ -55,6 +55,8 @@ type Validator func(request *APIContext, schema *Schema, data map[string]interfa
 
 type Formatter func(request *APIContext, resource *RawResource)
 
+type CollectionFormatter func(request *APIContext, collection *GenericCollection)
+
 type ErrorHandler func(request *APIContext, err error)
 
 type SubContextAttributeProvider interface {
