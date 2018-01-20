@@ -80,6 +80,11 @@ func (j *JSONResponseWriter) writeInterfaceSlice(builder *builder.Builder, apiCo
 			collection.Data = append(collection.Data, v)
 		}
 	}
+
+	if apiContext.Schema.CollectionFormatter != nil {
+		apiContext.Schema.CollectionFormatter(apiContext, collection)
+	}
+
 	return collection
 }
 
