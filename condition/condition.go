@@ -216,6 +216,9 @@ func findCond(val reflect.Value, name string) *reflect.Value {
 }
 
 func getValue(obj interface{}, name ...string) reflect.Value {
+	if obj == nil {
+		return reflect.Value{}
+	}
 	v := reflect.ValueOf(obj)
 	t := v.Type()
 	if t.Kind() == reflect.Ptr {
