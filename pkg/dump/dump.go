@@ -1,4 +1,4 @@
-package signal
+package dump
 
 import (
 	"bytes"
