@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/rancher/norman/api"
 	"github.com/rancher/norman/store/crd"
+	"github.com/rancher/norman/store/proxy"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/factory"
 	"k8s.io/client-go/tools/clientcmd"
@@ -39,13 +41,19 @@ func main() {
 		panic(err)
 	}
 
-	store, err := crd.NewCRDStoreFromConfig(*kubeConfig)
+	client, err := proxy.NewClientGetterFromConfig(*kubeConfig)
 	if err != nil {
 		panic(err)
 	}
 
+	crdFactory := crd.Factory{
+		ClientGetter: client,
+	}
+
 	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
-		schema.Store = store
+		if err := crdFactory.AssignStores(context.Background(), types.DefaultStorageContext, schema); err != nil {
+			panic(err)
+		}
 	})
 
 	server := api.NewAPIServer()
