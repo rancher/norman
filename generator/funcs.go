@@ -11,10 +11,12 @@ import (
 
 func funcs() template.FuncMap {
 	return template.FuncMap{
-		"capitalize": convert.Capitalize,
-		"upper":      strings.ToUpper,
-		"toLower":    strings.ToLower,
-		"hasGet":     hasGet,
+		"capitalize":   convert.Capitalize,
+		"unCapitalize": convert.Uncapitalize,
+		"upper":        strings.ToUpper,
+		"toLower":      strings.ToLower,
+		"hasGet":       hasGet,
+		"hasPost":      hasPost,
 	}
 }
 
@@ -24,6 +26,10 @@ func addUnderscore(input string) string {
 
 func hasGet(schema *types.Schema) bool {
 	return contains(schema.CollectionMethods, http.MethodGet)
+}
+
+func hasPost(schema *types.Schema) bool {
+	return contains(schema.CollectionMethods, http.MethodPost)
 }
 
 func contains(list []string, needle string) bool {
