@@ -89,11 +89,6 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 				}
 			}
 
-			// Don't copy empty strings
-			if !(value == "" && field.Type == "string") {
-				result[fieldName] = value
-			}
-
 			if op.IsList() && field.Type == "date" && value != "" {
 				ts, err := convert.ToTimestamp(value)
 				if err == nil {
@@ -117,8 +112,8 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 
 func (b *Builder) checkDefaultAndRequired(schema *types.Schema, input map[string]interface{}, op Operation, result map[string]interface{}) error {
 	for fieldName, field := range schema.ResourceFields {
-		_, hasKey := result[fieldName]
-		if op == Create && !hasKey && field.Default != nil {
+		val, hasKey := result[fieldName]
+		if op == Create && (!hasKey || val == "") && field.Default != nil {
 			result[fieldName] = field.Default
 		}
 
