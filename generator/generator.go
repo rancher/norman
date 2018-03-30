@@ -122,6 +122,21 @@ func getResourceActions(schema *types.Schema, schemas *types.Schemas) map[string
 	return result
 }
 
+func getCollectionActions(schema *types.Schema, schemas *types.Schemas) map[string]types.Action {
+	result := map[string]types.Action{}
+	for name, action := range schema.CollectionActions {
+		if action.Output != "" {
+			output := strings.TrimSuffix(action.Output, "Collection")
+			if schemas.Schema(&schema.Version, output) != nil {
+				result[name] = action
+			}
+		} else {
+			result[name] = action
+		}
+	}
+	return result
+}
+
 func generateType(outputDir string, schema *types.Schema, schemas *types.Schemas) error {
 	filePath := strings.ToLower("zz_generated_" + addUnderscore(schema.ID) + ".go")
 	output, err := os.Create(path.Join(outputDir, filePath))
@@ -138,9 +153,10 @@ func generateType(outputDir string, schema *types.Schema, schemas *types.Schemas
 	}
 
 	return typeTemplate.Execute(output, map[string]interface{}{
-		"schema":          schema,
-		"structFields":    getTypeMap(schema, schemas),
-		"resourceActions": getResourceActions(schema, schemas),
+		"schema":            schema,
+		"structFields":      getTypeMap(schema, schemas),
+		"resourceActions":   getResourceActions(schema, schemas),
+		"collectionActions": getCollectionActions(schema, schemas),
 	})
 }
 
