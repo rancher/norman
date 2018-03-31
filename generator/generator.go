@@ -240,7 +240,7 @@ func generateScheme(external bool, outputDir string, version *types.APIVersion, 
 		if !external {
 			names = append(names, schema.CodeName)
 		}
-		if schema.CanList(nil) {
+		if schema.CanList(nil) == nil {
 			names = append(names, schema.CodeName+"List")
 		}
 	}
