@@ -126,7 +126,10 @@ func getCollectionActions(schema *types.Schema, schemas *types.Schemas) map[stri
 	result := map[string]types.Action{}
 	for name, action := range schema.CollectionActions {
 		if action.Output != "" {
-			output := strings.TrimSuffix(action.Output, "Collection")
+			output := action.Output
+			if action.Output == "collection" {
+				output = strings.ToLower(schema.CodeName)
+			}
 			if schemas.Schema(&schema.Version, output) != nil {
 				result[name] = action
 			}

@@ -11,12 +11,13 @@ import (
 
 func funcs() template.FuncMap {
 	return template.FuncMap{
-		"capitalize":   convert.Capitalize,
-		"unCapitalize": convert.Uncapitalize,
-		"upper":        strings.ToUpper,
-		"toLower":      strings.ToLower,
-		"hasGet":       hasGet,
-		"hasPost":      hasPost,
+		"capitalize":          convert.Capitalize,
+		"unCapitalize":        convert.Uncapitalize,
+		"upper":               strings.ToUpper,
+		"toLower":             strings.ToLower,
+		"hasGet":              hasGet,
+		"hasPost":             hasPost,
+		"getCollectionOutput": getCollectionOutput,
 	}
 }
 
@@ -39,4 +40,11 @@ func contains(list []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func getCollectionOutput(output, codeName string) string {
+	if output == "collection" {
+		return codeName + "Collection"
+	}
+	return convert.Capitalize(output)
 }
