@@ -53,11 +53,11 @@ type {{.schema.CodeName}}Operations interface {
         {{if (and (eq $value.Input "") (eq $value.Output ""))}}
             Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (error)
         {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{.Output | capitalize}}, error)
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
         {{else if (and (ne $value.Input "") (eq $value.Output ""))}}
             Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (error)
         {{else}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{.Output | capitalize}}, error)
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
         {{end}}
 	{{end}}
 }
@@ -129,8 +129,8 @@ func (c *{{.schema.CodeName}}Client) Delete(container *{{.schema.CodeName}}) err
 			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, nil)
 			return err
     {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{.Output | capitalize}}, error) {
-			resp := &{{.Output | capitalize}}{}
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
+			resp := &{{getCollectionOutput $value.Output $.schema.CodeName}}{}
 			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, resp)
 			return resp, err
 	{{else if (and (ne $value.Input "") (eq $value.Output ""))}}
@@ -138,8 +138,8 @@ func (c *{{.schema.CodeName}}Client) Delete(container *{{.schema.CodeName}}) err
 			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, nil)
     		return err
 	{{else}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{.Output | capitalize}}, error) {
-			resp := &{{.Output | capitalize}}{}
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
+			resp := &{{getCollectionOutput $value.Output $.schema.CodeName}}{}
 			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, resp)
     		return resp, err
     {{end}}
