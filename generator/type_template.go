@@ -51,13 +51,13 @@ type {{.schema.CodeName}}Operations interface {
 	{{end}}
     {{range $key, $value := .collectionActions}}
         {{if (and (eq $value.Input "") (eq $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (error)
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (error)
         {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
         {{else if (and (ne $value.Input "") (eq $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (error)
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (error)
         {{else}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
         {{end}}
 	{{end}}
 }
@@ -125,22 +125,22 @@ func (c *{{.schema.CodeName}}Client) Delete(container *{{.schema.CodeName}}) err
 
 {{range $key, $value := .collectionActions}}
     {{if (and (eq $value.Input "") (eq $value.Output ""))}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (error) {
-			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, nil)
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (error) {
+			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, nil, nil)
 			return err
     {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
 			resp := &{{getCollectionOutput $value.Output $.schema.CodeName}}{}
-			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, resp)
+			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, nil, resp)
 			return resp, err
 	{{else if (and (ne $value.Input "") (eq $value.Output ""))}}
-		func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (error) {
-			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, nil)
+		func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (error) {
+			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, input, nil)
     		return err
 	{{else}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
 			resp := &{{getCollectionOutput $value.Output $.schema.CodeName}}{}
-			err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, resp)
+			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, input, resp)
     		return resp, err
     {{end}}
     }
