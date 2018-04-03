@@ -6,7 +6,7 @@ import (
 	"context"
 
 	{{.importPackage}}
-	"github.com/rancher/norman/clientbase"
+	"github.com/rancher/norman/objectclient"
 	"github.com/rancher/norman/controller"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,7 +59,7 @@ type {{.schema.CodeName}}Controller interface {
 }
 
 type {{.schema.CodeName}}Interface interface {
-    ObjectClient() *clientbase.ObjectClient
+    ObjectClient() *objectclient.ObjectClient
 	Create(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	GetNamespaced(namespace, name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
@@ -185,11 +185,11 @@ func (s *{{.schema.ID}}Client) Controller() {{.schema.CodeName}}Controller {
 type {{.schema.ID}}Client struct {
 	client *Client
 	ns string
-	objectClient *clientbase.ObjectClient
+	objectClient *objectclient.ObjectClient
 	controller   {{.schema.CodeName}}Controller
 }
 
-func (s *{{.schema.ID}}Client) ObjectClient() *clientbase.ObjectClient {
+func (s *{{.schema.ID}}Client) ObjectClient() *objectclient.ObjectClient {
 	return s.objectClient
 }
 

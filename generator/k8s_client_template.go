@@ -6,7 +6,7 @@ import (
 	"sync"
 	"context"
 
-	"github.com/rancher/norman/clientbase"
+	"github.com/rancher/norman/objectclient"
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/restwatch"
 	"k8s.io/client-go/dynamic"
@@ -64,7 +64,7 @@ type {{.CodeNamePlural}}Getter interface {
 }
 
 func (c *Client) {{.CodeNamePlural}}(namespace string) {{.CodeName}}Interface {
-	objectClient := clientbase.NewObjectClient(namespace, c.restClient, &{{.CodeName}}Resource, {{.CodeName}}GroupVersionKind, {{.ID}}Factory{})
+	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &{{.CodeName}}Resource, {{.CodeName}}GroupVersionKind, {{.ID}}Factory{})
 	return &{{.ID}}Client{
 		ns:           namespace,
 		client:       c,
