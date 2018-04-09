@@ -335,14 +335,14 @@ func (p *Store) Delete(apiContext *types.APIContext, schema *types.Schema, id st
 		return nil, err
 	}
 
-	namespace, id := splitID(id)
+	namespace, name := splitID(id)
 
 	prop := metav1.DeletePropagationForeground
 	req := p.common(namespace, k8sClient.Delete()).
 		Body(&metav1.DeleteOptions{
 			PropagationPolicy: &prop,
 		}).
-		Name(id)
+		Name(name)
 
 	err = p.doAuthed(apiContext, req).Error()
 	if err != nil {
