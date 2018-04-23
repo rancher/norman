@@ -39,6 +39,13 @@ func APIUpdateMerge(schema *types.Schema, schemas *types.Schemas, dest, src map[
 	return result
 }
 
+func isProtected(k string) bool {
+	if !strings.Contains(k, "cattle.io/") || strings.HasPrefix(k, "field.cattle.io/") {
+		return false
+	}
+	return true
+}
+
 func mergeProtected(dest, src map[string]interface{}) map[string]interface{} {
 	if src == nil {
 		return dest
@@ -47,14 +54,14 @@ func mergeProtected(dest, src map[string]interface{}) map[string]interface{} {
 	result := copyMap(dest)
 
 	for k, v := range src {
-		if strings.Contains(k, "cattle.io/") {
+		if isProtected(k) {
 			continue
 		}
 		result[k] = v
 	}
 
 	for k := range dest {
-		if strings.Contains(k, "cattle.io/") {
+		if isProtected(k) {
 			continue
 		}
 		if _, ok := src[k]; !ok {
