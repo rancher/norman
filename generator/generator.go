@@ -115,7 +115,11 @@ func getTypeMap(schema *types.Schema, schemas *types.Schemas) map[string]fieldIn
 func getResourceActions(schema *types.Schema, schemas *types.Schemas) map[string]types.Action {
 	result := map[string]types.Action{}
 	for name, action := range schema.ResourceActions {
-		if schemas.Schema(&schema.Version, action.Output) != nil {
+		if action.Output != "" {
+			if schemas.Schema(&schema.Version, action.Output) != nil {
+				result[name] = action
+			}
+		} else {
 			result[name] = action
 		}
 	}
