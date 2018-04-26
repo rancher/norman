@@ -42,22 +42,26 @@ type {{.schema.CodeName}}Operations interface {
     Update(existing *{{.schema.CodeName}}, updates interface{}) (*{{.schema.CodeName}}, error)
     ByID(id string) (*{{.schema.CodeName}}, error)
     Delete(container *{{.schema.CodeName}}) error
-	{{range $key, $value := .resourceActions}}
-    	{{if eq $value.Input "" }}
-        	Action{{$key | capitalize}} (*{{$.schema.CodeName}}) (*{{.Output | capitalize}}, error)
-    	{{else}}
-        	Action{{$key | capitalize}} (*{{$.schema.CodeName}}, *{{$value.Input | capitalize}}) (*{{.Output | capitalize}}, error)
-    	{{end}}
+    {{range $key, $value := .resourceActions}}
+        {{if (and (eq $value.Input "") (eq $value.Output ""))}}
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (error)
+        {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{.Output | capitalize}}, error)
+        {{else if (and (ne $value.Input "") (eq $value.Output ""))}}
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (error)
+        {{else}}
+            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{.Output | capitalize}}, error)
+        {{end}}
 	{{end}}
     {{range $key, $value := .collectionActions}}
         {{if (and (eq $value.Input "") (eq $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (error)
+            CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (error)
         {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
+            CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
         {{else if (and (ne $value.Input "") (eq $value.Output ""))}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (error)
+            CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (error)
         {{else}}
-            Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
+            CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error)
         {{end}}
 	{{end}}
 }
@@ -108,41 +112,48 @@ func (c *{{.schema.CodeName}}Client) Delete(container *{{.schema.CodeName}}) err
 }
 
 {{range $key, $value := .resourceActions}}
-    {{if eq $value.Input "" }}
+    {{if (and (eq $value.Input "") (eq $value.Output ""))}}
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (error) {
+            err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, nil)
+            return err
+    {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
         func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}) (*{{.Output | capitalize}}, error) {
+            resp := &{{.Output | capitalize}}{}
+            err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, resp)
+            return resp, err
+    {{else if (and (ne $value.Input "") (eq $value.Output ""))}}
+        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (error) {
+            err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, nil)
+            return err
     {{else}}
         func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}, input *{{$value.Input | capitalize}}) (*{{.Output | capitalize}}, error) {
-    {{end}}
-    resp := &{{.Output | capitalize}}{}
-    {{if eq $value.Input "" }}
-        err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, nil, resp)
-    {{else}}
-        err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, resp)
-    {{end}}
-    return resp, err
+            resp := &{{.Output | capitalize}}{}
+            err := c.apiClient.Ops.DoAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Resource, input, resp)
+            return resp, err
+    {{- end -}}
     }
 {{end}}
 
 {{range $key, $value := .collectionActions}}
     {{if (and (eq $value.Input "") (eq $value.Output ""))}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (error) {
+        func (c *{{$.schema.CodeName}}Client) CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (error) {
 			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, nil, nil)
 			return err
     {{else if (and (eq $value.Input "") (ne $value.Output ""))}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
+        func (c *{{$.schema.CodeName}}Client) CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
 			resp := &{{getCollectionOutput $value.Output $.schema.CodeName}}{}
 			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, nil, resp)
 			return resp, err
 	{{else if (and (ne $value.Input "") (eq $value.Output ""))}}
-		func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (error) {
+		func (c *{{$.schema.CodeName}}Client) CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (error) {
 			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, input, nil)
     		return err
 	{{else}}
-        func (c *{{$.schema.CodeName}}Client) Action{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
+        func (c *{{$.schema.CodeName}}Client) CollectionAction{{$key | capitalize}} (resource *{{$.schema.CodeName}}Collection, input *{{$value.Input | capitalize}}) (*{{getCollectionOutput $value.Output $.schema.CodeName}}, error) {
 			resp := &{{getCollectionOutput $value.Output $.schema.CodeName}}{}
 			err := c.apiClient.Ops.DoCollectionAction({{$.schema.CodeName}}Type, "{{$key}}", &resource.Collection, input, resp)
     		return resp, err
-    {{end}}
+    {{- end -}}
     }
 {{end}}
 {{end}}`
