@@ -39,7 +39,7 @@ func (e AnnotationField) FromInternal(data map[string]interface{}) {
 func (e AnnotationField) ToInternal(data map[string]interface{}) {
 	v, ok := data[e.Field]
 	if ok {
-		if e.Object || e.List {
+		if (e.Object || e.List) && v != nil {
 			if bytes, err := json.Marshal(v); err == nil {
 				v = string(bytes)
 			}
