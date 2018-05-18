@@ -78,6 +78,8 @@ func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas
 		return "intstr.IntOrString"
 	case "dnsLabel":
 		return "string"
+	case "hostname":
+		return "string"
 	default:
 		if schema != nil && schemas != nil {
 			otherSchema := schemas.Schema(&schema.Version, typeName)
