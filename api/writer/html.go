@@ -25,7 +25,7 @@ var data =
 )
 
 type HTMLResponseWriter struct {
-	JSONResponseWriter
+	JSONOrYAMLResponseWriter
 }
 
 func (h *HTMLResponseWriter) start(apiContext *types.APIContext, code int, obj interface{}) {

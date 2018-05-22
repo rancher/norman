@@ -18,7 +18,7 @@ const (
 
 type {{.schema.CodeName}} struct {
 {{- if .schema | hasGet }}
-    types.Resource
+    types.Resource %BACK%yaml:"-,omitempty"%BACK%
 {{- end}}
     {{- range $key, $value := .structFields}}
         {{$key}} {{$value.Type}} %BACK%json:"{{$value.Name}},omitempty" yaml:"{{$value.Name}},omitempty"%BACK%

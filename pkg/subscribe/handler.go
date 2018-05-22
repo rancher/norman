@@ -85,7 +85,9 @@ func handler(apiContext *types.APIContext) error {
 		close(events)
 	}()
 
-	jsonWriter := writer.JSONResponseWriter{}
+	jsonWriter := writer.JSONOrYAMLResponseWriter{
+		Encoder: types.JSONEncoder,
+	}
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 

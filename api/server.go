@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-
 	"sync"
 
 	"github.com/rancher/norman/api/access"
@@ -51,8 +50,15 @@ func NewAPIServer() *Server {
 	s := &Server{
 		Schemas: types.NewSchemas(),
 		ResponseWriters: map[string]ResponseWriter{
-			"json": &writer.JSONResponseWriter{},
-			"html": &writer.HTMLResponseWriter{},
+			"json": &writer.JSONOrYAMLResponseWriter{
+				Encoder: types.JSONEncoder,
+			},
+			"html": &writer.HTMLResponseWriter{
+				JSONOrYAMLResponseWriter: writer.JSONOrYAMLResponseWriter{Encoder: types.JSONEncoder},
+			},
+			"yaml": &writer.JSONOrYAMLResponseWriter{
+				Encoder: types.YamlEncoder,
+			},
 		},
 		SubContextAttributeProvider: &parse.DefaultSubContextAttributeProvider{},
 		Resolver:                    parse.DefaultResolver,
