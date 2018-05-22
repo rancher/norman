@@ -209,12 +209,18 @@ func parseVersionAndSubContext(schemas *types.Schemas, escapedPath string) (*typ
 		schema := schemas.Schema(&version, paths[1])
 		if schema != nil {
 			if i == 0 {
-				break
+				return nil, &version, "/" + paths[0], paths[1:], attrs
 			}
 			return nil, &version, "", paths[1:], attrs
 		}
 	}
 
+	// handle the case /v3/cluster/foo/export or other non-schema links
+	if strings.HasPrefix(version.Path, "/v3/cluster") || strings.HasPrefix(version.Path, "/v3/project") {
+		if paths[len(paths)-1] != "schema" && paths[len(paths)-1] != "schemas" {
+			return nil, &versions[1], "", pathParts[len(versionParts)-1:], nil
+		}
+	}
 	return nil, version, "/" + paths[0], paths[1:], attrs
 }
 
