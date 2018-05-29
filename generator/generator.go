@@ -78,6 +78,8 @@ func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas
 		return "intstr.IntOrString"
 	case "dnsLabel":
 		return "string"
+	case "dnsLabelRestricted":
+		return "string"
 	case "hostname":
 		return "string"
 	default:
