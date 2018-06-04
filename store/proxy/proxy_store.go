@@ -17,6 +17,7 @@ import (
 	"github.com/rancher/norman/types/values"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -294,7 +295,9 @@ func getNamespace(apiContext *types.APIContext, opt *types.QueryOptions) string 
 }
 
 func (s *Store) Create(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
-	s.toInternal(schema.Mapper, data)
+	if err := s.toInternal(schema.Mapper, data); err != nil {
+		return nil, err
+	}
 
 	namespace, _ := values.GetValueN(data, "metadata", "namespace").(string)
 
@@ -322,9 +325,11 @@ func (s *Store) Create(apiContext *types.APIContext, schema *types.Schema, data 
 	return result, err
 }
 
-func (s *Store) toInternal(mapper types.Mapper, data map[string]interface{}) {
+func (s *Store) toInternal(mapper types.Mapper, data map[string]interface{}) error {
 	if mapper != nil {
-		mapper.ToInternal(data)
+		if err := mapper.ToInternal(data); err != nil {
+			return err
+		}
 	}
 
 	if s.group == "" {
@@ -333,37 +338,52 @@ func (s *Store) toInternal(mapper types.Mapper, data map[string]interface{}) {
 		data["apiVersion"] = s.group + "/" + s.version
 	}
 	data["kind"] = s.kind
+	return nil
 }
 
 func (s *Store) Update(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
+	var (
+		result map[string]interface{}
+		err    error
+	)
+
 	k8sClient, err := s.k8sClient(apiContext)
 	if err != nil {
 		return nil, err
 	}
 
 	namespace, id := splitID(id)
-	req := s.common(namespace, k8sClient.Get()).
-		Name(id)
-
-	resourceVersion, existing, err := s.singleResultRaw(apiContext, schema, req)
-	if err != nil {
-		return data, nil
+	if err := s.toInternal(schema.Mapper, data); err != nil {
+		return nil, err
 	}
 
-	s.toInternal(schema.Mapper, data)
-	existing = merge.APIUpdateMerge(schema.InternalSchema, apiContext.Schemas, existing, data, apiContext.Query.Get("_replace") == "true")
+	for i := 0; i < 5; i++ {
+		req := s.common(namespace, k8sClient.Get()).
+			Name(id)
 
-	values.PutValue(existing, resourceVersion, "metadata", "resourceVersion")
-	values.PutValue(existing, namespace, "metadata", "namespace")
-	values.PutValue(existing, id, "metadata", "name")
+		resourceVersion, existing, rawErr := s.singleResultRaw(apiContext, schema, req)
+		if rawErr != nil {
+			return nil, rawErr
+		}
 
-	req = s.common(namespace, k8sClient.Put()).
-		Body(&unstructured.Unstructured{
-			Object: existing,
-		}).
-		Name(id)
+		existing = merge.APIUpdateMerge(schema.InternalSchema, apiContext.Schemas, existing, data, apiContext.Option("replace") == "true")
 
-	_, result, err := s.singleResult(apiContext, schema, req)
+		values.PutValue(existing, resourceVersion, "metadata", "resourceVersion")
+		values.PutValue(existing, namespace, "metadata", "namespace")
+		values.PutValue(existing, id, "metadata", "name")
+
+		req = s.common(namespace, k8sClient.Put()).
+			Body(&unstructured.Unstructured{
+				Object: existing,
+			}).
+			Name(id)
+
+		_, result, err = s.singleResult(apiContext, schema, req)
+		if errors.IsConflict(err) {
+			continue
+		}
+	}
+
 	return result, err
 }
 

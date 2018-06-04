@@ -13,7 +13,8 @@ type Access struct {
 func (e Access) FromInternal(data map[string]interface{}) {
 }
 
-func (e Access) ToInternal(data map[string]interface{}) {
+func (e Access) ToInternal(data map[string]interface{}) error {
+	return nil
 }
 
 func (e Access) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {

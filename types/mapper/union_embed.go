@@ -23,7 +23,7 @@ func (u *UnionEmbed) FromInternal(data map[string]interface{}) {
 	}
 }
 
-func (u *UnionEmbed) ToInternal(data map[string]interface{}) {
+func (u *UnionEmbed) ToInternal(data map[string]interface{}) error {
 outer:
 	for _, mapper := range u.Fields {
 		if len(mapper.CheckFields) == 0 {
@@ -38,9 +38,10 @@ outer:
 		}
 
 		embed := u.embeds[mapper.FieldName]
-		embed.ToInternal(data)
-		return
+		return embed.ToInternal(data)
 	}
+
+	return nil
 }
 
 func (u *UnionEmbed) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
