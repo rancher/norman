@@ -90,7 +90,7 @@ func IsNotFound(err error) bool {
 	return apiError.StatusCode == http.StatusNotFound
 }
 
-func newAPIError(resp *http.Response, url string) *APIError {
+func NewAPIError(resp *http.Response, url string) *APIError {
 	contents, err := ioutil.ReadAll(resp.Body)
 	var body string
 	if err != nil {
@@ -219,7 +219,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return result, newAPIError(resp, opts.URL)
+		return result, NewAPIError(resp, opts.URL)
 	}
 
 	schemasURLs := resp.Header.Get("X-API-Schemas")
@@ -242,7 +242,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			return result, newAPIError(resp, opts.URL)
+			return result, NewAPIError(resp, opts.URL)
 		}
 	}
 
