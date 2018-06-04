@@ -30,11 +30,15 @@ type Builder struct {
 	Version      *types.APIVersion
 	Schemas      *types.Schemas
 	RefValidator types.ReferenceValidator
+	edit         bool
+	export       bool
 }
 
 func NewBuilder(apiRequest *types.APIContext) *Builder {
 	return &Builder{
 		apiContext:   apiRequest,
+		edit:         apiRequest.Option("edit") == "true",
+		export:       apiRequest.Option("export") == "true",
 		Version:      apiRequest.Version,
 		Schemas:      apiRequest.Schemas,
 		RefValidator: apiRequest.ReferenceValidator,
@@ -99,7 +103,7 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 		}
 	}
 
-	if op.IsList() {
+	if op.IsList() && !b.edit && !b.export {
 		if !convert.IsEmpty(input["type"]) {
 			result["type"] = input["type"]
 		}
@@ -142,7 +146,67 @@ func (b *Builder) checkDefaultAndRequired(schema *types.Schema, input map[string
 		}
 	}
 
+	if op.IsList() && b.edit {
+		b.populateMissingFieldsForEdit(schema, result)
+	}
+
+	if op.IsList() && b.export {
+		b.dropDefaults(schema, result)
+	}
+
 	return nil
+}
+
+func (b *Builder) dropDefaults(schema *types.Schema, result map[string]interface{}) {
+	for name, existingVal := range result {
+		field, ok := schema.ResourceFields[name]
+		if !ok {
+			delete(result, name)
+		}
+
+		if !field.Create {
+			delete(result, name)
+			continue
+		}
+
+		if field.Default == existingVal {
+			delete(result, name)
+			continue
+		}
+
+		val, err := b.convert(field.Type, nil, List)
+		if err == nil && val == existingVal {
+			delete(result, name)
+			continue
+		}
+
+		if convert.IsEmpty(existingVal) {
+			delete(result, name)
+			continue
+		}
+	}
+}
+
+func (b *Builder) populateMissingFieldsForEdit(schema *types.Schema, result map[string]interface{}) {
+	for name, field := range schema.ResourceFields {
+		if !field.Update {
+			continue
+		}
+
+		_, hasKey := result[name]
+		if hasKey {
+			continue
+		}
+
+		if field.Default != nil {
+			result[name] = field.Default
+		} else {
+			val, err := b.convert(field.Type, nil, List)
+			if err == nil {
+				result[name] = val
+			}
+		}
+	}
 }
 
 func (b *Builder) copyFields(schema *types.Schema, input map[string]interface{}, op Operation) (map[string]interface{}, error) {
