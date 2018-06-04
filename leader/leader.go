@@ -16,14 +16,14 @@ import (
 )
 
 type State struct {
-	sync.Mutex
+	sync.RWMutex
 	identity string
 	leader   bool
 }
 
 func (l *State) Get() (string, bool) {
-	l.Lock()
-	defer l.Unlock()
+	l.RLock()
+	defer l.RUnlock()
 	return l.identity, l.leader
 }
 
