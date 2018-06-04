@@ -23,10 +23,11 @@ func (m Move) FromInternal(data map[string]interface{}) {
 	}
 }
 
-func (m Move) ToInternal(data map[string]interface{}) {
+func (m Move) ToInternal(data map[string]interface{}) error {
 	if v, ok := values.RemoveValue(data, strings.Split(m.To, "/")...); ok {
 		values.PutValue(data, v, strings.Split(m.From, "/")...)
 	}
+	return nil
 }
 
 func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {

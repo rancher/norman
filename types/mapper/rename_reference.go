@@ -17,10 +17,11 @@ func (r *RenameReference) FromInternal(data map[string]interface{}) {
 	}
 }
 
-func (r *RenameReference) ToInternal(data map[string]interface{}) {
+func (r *RenameReference) ToInternal(data map[string]interface{}) error {
 	if r.mapper != nil {
-		r.mapper.ToInternal(data)
+		return r.mapper.ToInternal(data)
 	}
+	return nil
 }
 
 func (r *RenameReference) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {

@@ -11,7 +11,9 @@ func InternalToInternal(from interface{}, fromSchema *types.Schema, toSchema *ty
 		return err
 	}
 	fromSchema.Mapper.FromInternal(data)
-	toSchema.Mapper.ToInternal(data)
+	if err := toSchema.Mapper.ToInternal(data); err != nil {
+		return err
+	}
 	return convert.ToObj(data, target)
 }
 
@@ -20,6 +22,8 @@ func ToInternal(from interface{}, schema *types.Schema, target interface{}) erro
 	if err != nil {
 		return err
 	}
-	schema.Mapper.ToInternal(data)
+	if err := schema.Mapper.ToInternal(data); err != nil {
+		return err
+	}
 	return convert.ToObj(data, target)
 }
