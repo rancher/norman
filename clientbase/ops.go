@@ -18,7 +18,7 @@ type APIOperations struct {
 	Client *http.Client
 }
 
-func (a *APIOperations) setupRequest(req *http.Request) {
+func (a *APIOperations) SetupRequest(req *http.Request) {
 	req.Header.Add("Authorization", a.Opts.getAuthHeader())
 }
 
@@ -28,18 +28,19 @@ func (a *APIOperations) DoDelete(url string) error {
 		return err
 	}
 
-	a.setupRequest(req)
+	a.SetupRequest(req)
 
 	resp, err := a.Client.Do(req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	io.Copy(ioutil.Discard, resp.Body)
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode >= 300 {
-		return newAPIError(resp, url)
+		return NewAPIError(resp, url)
 	}
 
 	return nil
@@ -63,7 +64,7 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 		return err
 	}
 
-	a.setupRequest(req)
+	a.SetupRequest(req)
 
 	resp, err := a.Client.Do(req)
 	if err != nil {
@@ -73,7 +74,7 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return newAPIError(resp, url)
+		return NewAPIError(resp, url)
 	}
 
 	byteContent, err := ioutil.ReadAll(resp.Body)
@@ -102,7 +103,12 @@ func (a *APIOperations) DoList(schemaType string, opts *types.ListOpts, respObje
 		return errors.New("Resource type [" + schemaType + "] is not listable")
 	}
 
-	return a.DoGet(a.Opts.URL+"/"+schemaType, opts, respObject)
+	collectionUrl, ok := schema.Links["collection"]
+	if !ok {
+		return errors.New("Resource type [" + schemaType + "] does not have a collection URL")
+	}
+
+	return a.DoGet(collectionUrl, opts, respObject)
 }
 
 func (a *APIOperations) DoNext(nextURL string, respObject interface{}) error {
@@ -125,7 +131,7 @@ func (a *APIOperations) DoModify(method string, url string, createObj interface{
 		return err
 	}
 
-	a.setupRequest(req)
+	a.SetupRequest(req)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := a.Client.Do(req)
@@ -136,7 +142,7 @@ func (a *APIOperations) DoModify(method string, url string, createObj interface{
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return newAPIError(resp, url)
+		return NewAPIError(resp, url)
 	}
 
 	byteContent, err := ioutil.ReadAll(resp.Body)
@@ -305,7 +311,7 @@ func (a *APIOperations) doAction(
 		return err
 	}
 
-	a.setupRequest(req)
+	a.SetupRequest(req)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", "0")
 
@@ -317,7 +323,7 @@ func (a *APIOperations) doAction(
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return newAPIError(resp, actionURL)
+		return NewAPIError(resp, actionURL)
 	}
 
 	byteContent, err := ioutil.ReadAll(resp.Body)
