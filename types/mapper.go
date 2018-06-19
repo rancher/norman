@@ -5,6 +5,7 @@ import (
 
 	"github.com/rancher/norman/types/convert"
 	"github.com/rancher/norman/types/definition"
+	"github.com/rancher/norman/types/values"
 )
 
 type Mapper interface {
@@ -45,6 +46,9 @@ type typeMapper struct {
 }
 
 func (t *typeMapper) FromInternal(data map[string]interface{}) {
+	name, _ := values.GetValueN(data, "metadata", "name").(string)
+	namespace, _ := values.GetValueN(data, "metadata", "namespace").(string)
+
 	for fieldName, schema := range t.subSchemas {
 		if schema.Mapper == nil {
 			continue
@@ -71,9 +75,6 @@ func (t *typeMapper) FromInternal(data map[string]interface{}) {
 	}
 
 	if data != nil && t.root {
-		name, _ := data["name"].(string)
-		namespace, _ := data["namespaceId"].(string)
-
 		if _, ok := data["id"]; ok {
 			if namespace != "" {
 				id, _ := data["id"].(string)
