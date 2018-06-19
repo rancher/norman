@@ -176,7 +176,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	}
 
 	if opts.Timeout == 0 {
-		opts.Timeout = time.Second * 10
+		opts.Timeout = time.Minute
 	}
 
 	client.Timeout = opts.Timeout
