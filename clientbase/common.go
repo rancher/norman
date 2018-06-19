@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	debug  = false
+	Debug = false
 )
 
 type APIBaseClientInterface interface {
@@ -346,8 +346,8 @@ func (a *APIBaseClient) Action(schemaType string, action string,
 }
 
 func init() {
-	debug = os.Getenv("RANCHER_CLIENT_DEBUG") == "true"
-	if debug {
+	Debug = os.Getenv("RANCHER_CLIENT_DEBUG") == "true"
+	if Debug {
 		fmt.Println("Rancher client debug on")
 	}
 }

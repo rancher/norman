@@ -57,7 +57,7 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 		return err
 	}
 
-	if debug {
+	if Debug {
 		fmt.Println("GET " + url)
 	}
 
@@ -84,7 +84,7 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 		return err
 	}
 
-	if debug {
+	if Debug {
 		fmt.Println("Response <= " + string(byteContent))
 	}
 
@@ -123,7 +123,7 @@ func (a *APIOperations) DoModify(method string, url string, createObj interface{
 		return err
 	}
 
-	if debug {
+	if Debug {
 		fmt.Println(method + " " + url)
 		fmt.Println("Request => " + string(bodyContent))
 	}
@@ -153,7 +153,7 @@ func (a *APIOperations) DoModify(method string, url string, createObj interface{
 	}
 
 	if len(byteContent) > 0 {
-		if debug {
+		if Debug {
 			fmt.Println("Response <= " + string(byteContent))
 		}
 		return json.Unmarshal(byteContent, respObject)
@@ -293,7 +293,7 @@ func (a *APIOperations) doAction(
 
 	var input io.Reader
 
-	if debug {
+	if Debug {
 		fmt.Println("POST " + actionURL)
 	}
 
@@ -302,7 +302,7 @@ func (a *APIOperations) doAction(
 		if err != nil {
 			return err
 		}
-		if debug {
+		if Debug {
 			fmt.Println("Request => " + string(bodyContent))
 		}
 		input = bytes.NewBuffer(bodyContent)
@@ -333,7 +333,7 @@ func (a *APIOperations) doAction(
 		return err
 	}
 
-	if debug {
+	if Debug {
 		fmt.Println("Response <= " + string(byteContent))
 	}
 
