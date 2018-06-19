@@ -198,7 +198,7 @@ func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 	var result []map[string]interface{}
 
 	for _, obj := range resultList.Items {
-		result = append(result, s.fromInternal(schema, obj.Object))
+		result = append(result, s.fromInternal(apiContext, schema, obj.Object))
 	}
 
 	return apiContext.AccessControl.FilterList(apiContext, schema, result, s.authContext), nil
@@ -254,7 +254,7 @@ func (s *Store) realWatch(apiContext *types.APIContext, schema *types.Schema, op
 	go func() {
 		for event := range watcher.ResultChan() {
 			data := event.Object.(*unstructured.Unstructured)
-			s.fromInternal(schema, data.Object)
+			s.fromInternal(apiContext, schema, data.Object)
 			if event.Type == watch.Deleted && data.Object != nil {
 				data.Object[".removed"] = true
 			}
@@ -419,7 +419,7 @@ func (s *Store) singleResult(apiContext *types.APIContext, schema *types.Schema,
 	if err != nil {
 		return "", nil, err
 	}
-	s.fromInternal(schema, data)
+	s.fromInternal(apiContext, schema, data)
 	return version, data, nil
 }
 
@@ -460,7 +460,10 @@ func (s *Store) common(namespace string, req *rest.Request) *rest.Request {
 	return req
 }
 
-func (s *Store) fromInternal(schema *types.Schema, data map[string]interface{}) map[string]interface{} {
+func (s *Store) fromInternal(apiContext *types.APIContext, schema *types.Schema, data map[string]interface{}) map[string]interface{} {
+	if apiContext.Option("export") == "true" {
+		delete(data, "status")
+	}
 	if schema.Mapper != nil {
 		schema.Mapper.FromInternal(data)
 	}
