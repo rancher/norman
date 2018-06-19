@@ -40,6 +40,7 @@ type {{.schema.CodeName}}Operations interface {
     List(opts *types.ListOpts) (*{{.schema.CodeName}}Collection, error)
     Create(opts *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
     Update(existing *{{.schema.CodeName}}, updates interface{}) (*{{.schema.CodeName}}, error)
+    Replace(existing *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
     ByID(id string) (*{{.schema.CodeName}}, error)
     Delete(container *{{.schema.CodeName}}) error
     {{range $key, $value := .resourceActions}}
@@ -82,6 +83,12 @@ func (c *{{.schema.CodeName}}Client) Update(existing *{{.schema.CodeName}}, upda
     resp := &{{.schema.CodeName}}{}
     err := c.apiClient.Ops.DoUpdate({{.schema.CodeName}}Type, &existing.Resource, updates, resp)
     return resp, err
+}
+
+func (c *{{.schema.CodeName}}Client) Replace(obj *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error) {
+	resp := &{{.schema.CodeName}}{}
+	err := c.apiClient.Ops.DoReplace({{.schema.CodeName}}Type, &obj.Resource, obj, resp)
+	return resp, err
 }
 
 func (c *{{.schema.CodeName}}Client) List(opts *types.ListOpts) (*{{.schema.CodeName}}Collection, error) {
