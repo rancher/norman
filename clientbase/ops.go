@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
@@ -183,7 +184,15 @@ func (a *APIOperations) DoCreate(schemaType string, createObj interface{}, respO
 	return a.DoModify("POST", a.Opts.URL+"/"+schemaType, createObj, respObject)
 }
 
+func (a *APIOperations) DoReplace(schemaType string, existing *types.Resource, updates interface{}, respObject interface{}) error {
+	return a.doUpdate(schemaType, true, existing, updates, respObject)
+}
+
 func (a *APIOperations) DoUpdate(schemaType string, existing *types.Resource, updates interface{}, respObject interface{}) error {
+	return a.doUpdate(schemaType, false, existing, updates, respObject)
+}
+
+func (a *APIOperations) doUpdate(schemaType string, replace bool, existing *types.Resource, updates interface{}, respObject interface{}) error {
 	if existing == nil {
 		return errors.New("Existing object is nil")
 	}
@@ -191,6 +200,17 @@ func (a *APIOperations) DoUpdate(schemaType string, existing *types.Resource, up
 	selfURL, ok := existing.Links[SELF]
 	if !ok {
 		return fmt.Errorf("failed to find self URL of [%v]", existing)
+	}
+
+	if replace {
+		u, err := url.Parse(selfURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse url %s: %v", selfURL, err)
+		}
+		q := u.Query()
+		q.Set("_replace", "true")
+		u.RawQuery = q.Encode()
+		selfURL = u.String()
 	}
 
 	if updates == nil {
