@@ -151,13 +151,13 @@ func (b *Builder) checkDefaultAndRequired(schema *types.Schema, input map[string
 	}
 
 	if op.IsList() && b.export {
-		b.dropDefaults(schema, result)
+		b.dropDefaultsAndReadOnly(schema, result)
 	}
 
 	return nil
 }
 
-func (b *Builder) dropDefaults(schema *types.Schema, result map[string]interface{}) {
+func (b *Builder) dropDefaultsAndReadOnly(schema *types.Schema, result map[string]interface{}) {
 	for name, existingVal := range result {
 		field, ok := schema.ResourceFields[name]
 		if !ok {
