@@ -62,6 +62,9 @@ func (e *Embed) ModifySchema(schema *types.Schema, schemas *types.Schemas) error
 	embeddedSchemaID := schema.ResourceFields[e.Field].Type
 	embeddedSchema := schemas.Schema(&schema.Version, embeddedSchemaID)
 	if embeddedSchema == nil {
+		if e.Optional {
+			return nil
+		}
 		return fmt.Errorf("failed to find schema %s for embedding", embeddedSchemaID)
 	}
 
