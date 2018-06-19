@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 )
@@ -16,6 +17,7 @@ type APIOperations struct {
 	Opts   *ClientOpts
 	Types  map[string]types.Schema
 	Client *http.Client
+	Dialer *websocket.Dialer
 }
 
 func (a *APIOperations) SetupRequest(req *http.Request) {

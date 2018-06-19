@@ -25,7 +25,6 @@ const (
 
 var (
 	debug  = false
-	dialer = &websocket.Dialer{}
 )
 
 type APIBaseClientInterface interface {
@@ -265,7 +264,13 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	result.Ops = &APIOperations{
 		Opts:   opts,
 		Client: client,
+		Dialer: &websocket.Dialer{},
 		Types:  result.Types,
+	}
+
+	ht, ok := client.Transport.(*http.Transport)
+	if ok {
+		result.Ops.Dialer.TLSClientConfig = ht.TLSClientConfig
 	}
 
 	return result, nil
@@ -287,7 +292,7 @@ func (a *APIBaseClient) Websocket(url string, headers map[string][]string) (*web
 		httpHeaders.Add("Authorization", a.Opts.getAuthHeader())
 	}
 
-	return dialer.Dial(url, http.Header(httpHeaders))
+	return a.Ops.Dialer.Dial(url, http.Header(httpHeaders))
 }
 
 func (a *APIBaseClient) List(schemaType string, opts *types.ListOpts, respObject interface{}) error {
