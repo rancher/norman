@@ -102,7 +102,7 @@ func (l *{{.schema.ID}}Lister) Get(namespace, name string) (*{{.prefix}}{{.schem
 		return nil, errors.NewNotFound(schema.GroupResource{
 			Group: {{.schema.CodeName}}GroupVersionKind.Group,
 			Resource: "{{.schema.ID}}",
-		}, name)
+		}, key)
 	}
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), nil
 }
