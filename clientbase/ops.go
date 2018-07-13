@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
@@ -106,12 +107,12 @@ func (a *APIOperations) DoList(schemaType string, opts *types.ListOpts, respObje
 		return errors.New("Resource type [" + schemaType + "] is not listable")
 	}
 
-	collectionUrl, ok := schema.Links["collection"]
+	collectionURL, ok := schema.Links["collection"]
 	if !ok {
 		return errors.New("Resource type [" + schemaType + "] does not have a collection URL")
 	}
 
-	return a.DoGet(collectionUrl, opts, respObject)
+	return a.DoGet(collectionURL, opts, respObject)
 }
 
 func (a *APIOperations) DoNext(nextURL string, respObject interface{}) error {
@@ -179,9 +180,16 @@ func (a *APIOperations) DoCreate(schemaType string, createObj interface{}, respO
 		return errors.New("Resource type [" + schemaType + "] is not creatable")
 	}
 
-	// using collection link to post doesn't help the resources under project or cluster, because they need a projectId or clusterId in the path
-	// for example, v3/projects/foo/apps, v3/cluster/bar/namespaces
-	return a.DoModify("POST", a.Opts.URL+"/"+schemaType, createObj, respObject)
+	var collectionURL string
+	collectionURL, ok = schema.Links[COLLECTION]
+	if !ok {
+		// return errors.New("Failed to find collection URL for [" + schemaType + "]")
+		// This is a hack to address https://github.com/rancher/cattle/issues/254
+		re := regexp.MustCompile("schemas.*")
+		collectionURL = re.ReplaceAllString(schema.Links[SELF], schema.PluralName)
+	}
+
+	return a.DoModify("POST", collectionURL, createObj, respObject)
 }
 
 func (a *APIOperations) DoReplace(schemaType string, existing *types.Resource, updates interface{}, respObject interface{}) error {
