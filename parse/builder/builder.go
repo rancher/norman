@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,11 +13,12 @@ import (
 )
 
 var (
-	Create        = Operation("create")
-	Update        = Operation("update")
-	Action        = Operation("action")
-	List          = Operation("list")
-	ListForCreate = Operation("listcreate")
+	Create         = Operation("create")
+	Update         = Operation("update")
+	Action         = Operation("action")
+	List           = Operation("list")
+	ListForCreate  = Operation("listcreate")
+	ErrComplexType = errors.New("complex type")
 )
 
 type Operation string
@@ -32,11 +34,13 @@ type Builder struct {
 	RefValidator types.ReferenceValidator
 	edit         bool
 	export       bool
+	yaml         bool
 }
 
 func NewBuilder(apiRequest *types.APIContext) *Builder {
 	return &Builder{
 		apiContext:   apiRequest,
+		yaml:         apiRequest.ResponseFormat == "yaml",
 		edit:         apiRequest.Option("edit") == "true",
 		export:       apiRequest.Option("export") == "true",
 		Version:      apiRequest.Version,
@@ -82,19 +86,19 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 						if sliceValue == nil {
 							return httperror.NewFieldAPIError(httperror.NotNullable, fieldName, "Individual array values can not be null")
 						}
-						if err := checkFieldCriteria(fieldName, field, sliceValue); err != nil {
+						if err := CheckFieldCriteria(fieldName, field, sliceValue); err != nil {
 							return err
 						}
 					}
 				} else {
-					if err := checkFieldCriteria(fieldName, field, value); err != nil {
+					if err := CheckFieldCriteria(fieldName, field, value); err != nil {
 						return err
 					}
 				}
 			}
 			result[fieldName] = value
 
-			if op.IsList() && field.Type == "date" && value != "" {
+			if op.IsList() && field.Type == "date" && value != "" && !b.edit {
 				ts, err := convert.ToTimestamp(value)
 				if err == nil {
 					result[fieldName+"TS"] = ts
@@ -190,20 +194,32 @@ func (b *Builder) dropDefaultsAndReadOnly(schema *types.Schema, result map[strin
 func (b *Builder) populateMissingFieldsForEdit(schema *types.Schema, result map[string]interface{}) {
 	for name, field := range schema.ResourceFields {
 		if !field.Update {
+			if name != "name" {
+				delete(result, name)
+			}
 			continue
 		}
 
-		_, hasKey := result[name]
+		desc := field.Description
+		if len(desc) > 0 {
+			desc += " "
+		}
+
+		value, hasKey := result[name]
 		if hasKey {
+			if field.Default != nil && field.Default == value {
+				delete(result, name)
+				result["zzz#("+desc+")("+field.Type+")"+name] = value
+			}
 			continue
 		}
 
 		if field.Default != nil {
-			result[name] = field.Default
+			result["zzz#("+desc+")("+field.Type+")"+name] = field.Default
 		} else {
 			val, err := b.convert(field.Type, nil, List)
 			if err == nil {
-				result[name] = val
+				result["zzz#("+desc+")("+field.Type+")"+name] = val
 			}
 		}
 	}
@@ -219,7 +235,7 @@ func (b *Builder) copyFields(schema *types.Schema, input map[string]interface{},
 	return result, b.checkDefaultAndRequired(schema, input, op, result)
 }
 
-func checkFieldCriteria(fieldName string, field types.Field, value interface{}) error {
+func CheckFieldCriteria(fieldName string, field types.Field, value interface{}) error {
 	numVal, isNum := value.(int64)
 	strVal := ""
 	hasStrVal := false
@@ -291,18 +307,9 @@ func checkFieldCriteria(fieldName string, field types.Field, value interface{}) 
 	return nil
 }
 
-func (b *Builder) convert(fieldType string, value interface{}, op Operation) (interface{}, error) {
+func ConvertSimple(fieldType string, value interface{}, op Operation) (interface{}, error) {
 	if value == nil {
 		return value, nil
-	}
-
-	switch {
-	case definition.IsMapType(fieldType):
-		return b.convertMap(fieldType, value, op)
-	case definition.IsArrayType(fieldType):
-		return b.convertArray(fieldType, value, op)
-	case definition.IsReferenceType(fieldType):
-		return b.convertReferenceType(fieldType, value)
 	}
 
 	switch fieldType {
@@ -372,7 +379,28 @@ func (b *Builder) convert(fieldType string, value interface{}, op Operation) (in
 		return convert.ToString(value), nil
 	}
 
-	return b.convertType(fieldType, value, op)
+	return nil, ErrComplexType
+}
+
+func (b *Builder) convert(fieldType string, value interface{}, op Operation) (interface{}, error) {
+	if value == nil {
+		return value, nil
+	}
+
+	switch {
+	case definition.IsMapType(fieldType):
+		return b.convertMap(fieldType, value, op)
+	case definition.IsArrayType(fieldType):
+		return b.convertArray(fieldType, value, op)
+	case definition.IsReferenceType(fieldType):
+		return b.convertReferenceType(fieldType, value)
+	}
+
+	newValue, err := ConvertSimple(fieldType, value, op)
+	if err == ErrComplexType {
+		return b.convertType(fieldType, value, op)
+	}
+	return newValue, err
 }
 
 func (b *Builder) convertType(fieldType string, value interface{}, op Operation) (interface{}, error) {
@@ -413,7 +441,7 @@ func (b *Builder) convertArray(fieldType string, value interface{}, op Operation
 		return nil, nil
 	}
 
-	result := []interface{}{}
+	var result []interface{}
 	subType := definition.SubType(fieldType)
 
 	for _, value := range sliceValue {
