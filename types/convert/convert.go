@@ -133,7 +133,7 @@ func LowerTitle(input string) string {
 	return string(runes)
 }
 
-func IsEmpty(v interface{}) bool {
+func IsAPIObjectEmpty(v interface{}) bool {
 	if v == nil || v == "" || v == 0 || v == false {
 		return true
 	}
