@@ -69,6 +69,8 @@ type QueryFilter func(opts *QueryOptions, schema *Schema, data []map[string]inte
 
 type Validator func(request *APIContext, schema *Schema, data map[string]interface{}) error
 
+type InputFormatter func(request *APIContext, schema *Schema, data map[string]interface{}, create bool) error
+
 type Formatter func(request *APIContext, resource *RawResource)
 
 type CollectionFormatter func(request *APIContext, collection *GenericCollection)
