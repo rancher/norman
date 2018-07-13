@@ -108,10 +108,10 @@ func (b *Builder) copyInputs(schema *types.Schema, input map[string]interface{},
 	}
 
 	if op.IsList() && !b.edit && !b.export {
-		if !convert.IsEmpty(input["type"]) {
+		if !convert.IsAPIObjectEmpty(input["type"]) {
 			result["type"] = input["type"]
 		}
-		if !convert.IsEmpty(input["id"]) {
+		if !convert.IsAPIObjectEmpty(input["id"]) {
 			result["id"] = input["id"]
 		}
 	}
@@ -184,7 +184,7 @@ func (b *Builder) dropDefaultsAndReadOnly(schema *types.Schema, result map[strin
 			continue
 		}
 
-		if convert.IsEmpty(existingVal) {
+		if convert.IsAPIObjectEmpty(existingVal) {
 			delete(result, name)
 			continue
 		}

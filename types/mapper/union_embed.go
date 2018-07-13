@@ -32,7 +32,7 @@ outer:
 
 		for _, check := range mapper.CheckFields {
 			v, ok := data[check]
-			if !ok || convert.IsEmpty(v) {
+			if !ok || convert.IsAPIObjectEmpty(v) {
 				continue outer
 			}
 		}
