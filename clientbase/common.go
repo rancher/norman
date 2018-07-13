@@ -208,7 +208,6 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	if err != nil {
 		return result, err
 	}
-
 	req.Header.Add("Authorization", opts.getAuthHeader())
 
 	resp, err := client.Do(req)
@@ -228,20 +227,23 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 
 	if schemasURLs != opts.URL {
 		req, err = http.NewRequest("GET", schemasURLs, nil)
-		req.Header.Add("Authorization", opts.getAuthHeader())
 		if err != nil {
 			return result, err
+		}
+		req.Header.Add("Authorization", opts.getAuthHeader())
+
+		if Debug {
+			fmt.Println("GET " + req.URL.String())
 		}
 
 		resp, err = client.Do(req)
 		if err != nil {
 			return result, err
 		}
-
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			return result, NewAPIError(resp, opts.URL)
+			return result, NewAPIError(resp, schemasURLs)
 		}
 	}
 
@@ -249,6 +251,10 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return result, err
+	}
+
+	if Debug {
+		fmt.Println("Response <= " + string(bytes))
 	}
 
 	err = json.Unmarshal(bytes, &schemas)
