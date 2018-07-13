@@ -25,7 +25,7 @@ type {{.schema.CodeName}} struct {
     {{- end}}
 }
 
-{{- if .schema | hasGet }}
+{{ if .schema | hasGet }}
 type {{.schema.CodeName}}Collection struct {
     types.Collection
     Data []{{.schema.CodeName}} %BACK%json:"data,omitempty"%BACK%
