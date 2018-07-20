@@ -82,11 +82,17 @@ func (t *typeMapper) FromInternal(data map[string]interface{}) {
 		}
 	}
 
+	// Attempt to set type so mappers are aware of it
 	if _, ok := data["type"]; !ok && data != nil {
 		data["type"] = t.typeName
 	}
 
 	Mappers(t.Mappers).FromInternal(data)
+
+	// Ensure if there is no type we set one
+	if _, ok := data["type"]; !ok && data != nil {
+		data["type"] = t.typeName
+	}
 
 	if data != nil && t.root {
 		if _, ok := data["id"]; ok {
