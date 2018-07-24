@@ -194,6 +194,13 @@ func (s *{{.schema.ID}}Client) ObjectClient() *objectclient.ObjectClient {
 }
 
 func (s *{{.schema.ID}}Client) Create(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	{{- if (or (eq .schema.ID "role") (eq .schema.ID "roleBinding") (eq .schema.ID "clusterRole") (eq .schema.ID "clusterRoleBinding"))}}
+	if o.Labels == nil {
+		labels := make(map[string]string)
+		o.Labels = labels
+	}
+	o.Labels["creator.cattle.io/rancher-created"] = "true"
+	{{- end}}
 	obj, err := s.objectClient.Create(o)
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
@@ -209,6 +216,13 @@ func (s *{{.schema.ID}}Client) GetNamespaced(namespace, name string, opts metav1
 }
 
 func (s *{{.schema.ID}}Client) Update(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	{{- if (or (eq .schema.ID "role") (eq .schema.ID "roleBinding") (eq .schema.ID "clusterRole") (eq .schema.ID "clusterRoleBinding"))}}
+	if o.Labels == nil {
+		labels := make(map[string]string)
+		o.Labels = labels
+	}
+	o.Labels["creator.cattle.io/rancher-created"] = "true"
+	{{- end}}
 	obj, err := s.objectClient.Update(o.Name, o)
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
