@@ -241,8 +241,8 @@ func (s *Store) realWatch(apiContext *types.APIContext, schema *types.Schema, op
 	}
 
 	framer := json.Framer.NewFrameReader(body)
-	decoder := streaming.NewDecoder(framer, unstructured.UnstructuredJSONScheme)
-	watcher := watch.NewStreamWatcher(restclientwatch.NewDecoder(decoder, unstructured.UnstructuredJSONScheme))
+	decoder := streaming.NewDecoder(framer, &unstructuredDecoder{})
+	watcher := watch.NewStreamWatcher(restclientwatch.NewDecoder(decoder, &unstructuredDecoder{}))
 
 	go func() {
 		<-apiContext.Request.Context().Done()
