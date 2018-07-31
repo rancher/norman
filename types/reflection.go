@@ -299,7 +299,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		if schemaField.Type == "" {
 			inferedType, err := s.determineSchemaType(&schema.Version, fieldType)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed inspecting type %s, field %s: %v", t, fieldName, err)
 			}
 			schemaField.Type = inferedType
 		}
