@@ -54,6 +54,7 @@ type ClientOpts struct {
 	TokenKey   string
 	Timeout    time.Duration
 	HTTPClient *http.Client
+	WSDialer   *websocket.Dialer
 	CACerts    string
 	Insecure   bool
 }
@@ -275,6 +276,10 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 		Types:  result.Types,
 	}
 
+	if result.Opts.WSDialer != nil {
+		result.Ops.Dialer = result.Opts.WSDialer
+	}
+
 	ht, ok := client.Transport.(*http.Transport)
 	if ok {
 		result.Ops.Dialer.TLSClientConfig = ht.TLSClientConfig
@@ -297,6 +302,10 @@ func (a *APIBaseClient) Websocket(url string, headers map[string][]string) (*web
 
 	if a.Opts != nil {
 		httpHeaders.Add("Authorization", a.Opts.getAuthHeader())
+	}
+
+	if Debug {
+		fmt.Println("WS " + url)
 	}
 
 	return a.Ops.Dialer.Dial(url, http.Header(httpHeaders))
