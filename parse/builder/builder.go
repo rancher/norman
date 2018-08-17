@@ -330,9 +330,6 @@ func ConvertSimple(fieldType string, value interface{}, op Operation) (interface
 	case "password":
 		return convert.ToString(value), nil
 	case "string":
-		if op.IsList() {
-			return convert.ToStringNoTrim(value), nil
-		}
 		return convert.ToString(value), nil
 	case "dnsLabel":
 		str := convert.ToString(value)
