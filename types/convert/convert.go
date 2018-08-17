@@ -44,7 +44,7 @@ func Singular(value interface{}) interface{} {
 	return value
 }
 
-func ToStringNoTrim(value interface{}) string {
+func ToString(value interface{}) string {
 	if t, ok := value.(time.Time); ok {
 		return t.Format(time.RFC3339)
 	}
@@ -52,11 +52,7 @@ func ToStringNoTrim(value interface{}) string {
 	if single == nil {
 		return ""
 	}
-	return fmt.Sprint(single)
-}
-
-func ToString(value interface{}) string {
-	return strings.TrimSpace(ToStringNoTrim(value))
+	return strings.TrimSpace(fmt.Sprint(single))
 }
 
 func ToTimestamp(value interface{}) (int64, error) {
