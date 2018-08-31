@@ -39,7 +39,6 @@ var (
 )
 
 type ClientGetter interface {
-	Config(apiContext *types.APIContext, context types.StorageContext) (rest.Config, error)
 	UnversionedClient(apiContext *types.APIContext, context types.StorageContext) (rest.Interface, error)
 	APIExtClient(apiContext *types.APIContext, context types.StorageContext) (clientset.Interface, error)
 }
