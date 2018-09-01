@@ -284,10 +284,10 @@ func getNamespace(apiContext *types.APIContext, opt *types.QueryOptions) string 
 
 	for _, condition := range opt.Conditions {
 		mod := condition.ToCondition().Modifier
-		if condition.Field == "namespaceId" && condition.Value != "" && mod != types.ModifierIn && mod != types.ModifierNotIn {
+		if condition.Field == "namespaceId" && condition.Value != "" && mod == types.ModifierEQ {
 			return condition.Value
 		}
-		if condition.Field == "namespace" && condition.Value != "" && mod != types.ModifierIn && mod != types.ModifierNotIn {
+		if condition.Field == "namespace" && condition.Value != "" && mod == types.ModifierEQ {
 			return condition.Value
 		}
 	}
