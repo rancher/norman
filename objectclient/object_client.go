@@ -256,15 +256,12 @@ func (d *structuredDecoder) Decode(data []byte, defaults *schema.GroupVersionKin
 
 	err := json.Unmarshal(data, &into)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	if _, ok := into.(*metav1.Status); !ok && strings.ToLower(into.GetObjectKind().GroupVersionKind().Kind) == "status" {
-		into = &metav1.Status{}
-		err := json.Unmarshal(data, into)
-		if err != nil {
+		if _, ok := into.(*metav1.Status); !ok && strings.ToLower(into.GetObjectKind().GroupVersionKind().Kind) == "status" {
+			into = &metav1.Status{}
+			err := json.Unmarshal(data, into)
 			return nil, nil, err
 		}
+		return nil, nil, err
 	}
 
 	return into, defaults, err
