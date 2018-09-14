@@ -47,6 +47,32 @@ func (s *Schemas) AddMapperForType(version *APIVersion, obj interface{}, mapper 
 	return s.AddMapper(version, typeName, Mappers(mapper))
 }
 
+// RemoveMapperForType removes mappers of a specific schema that match arg mapper types.
+// Use it after the type is imported so that default mappers are also under control.
+func (s *Schemas) RemoveMapperForType(version *APIVersion, obj interface{}, mapper ...Mapper) *Schemas {
+	if len(mapper) == 0 {
+		return s
+	}
+
+	t := reflect.TypeOf(obj)
+	typeName := s.getTypeName(t)
+
+	schema := s.Schema(version, typeName)
+	tm, ok := schema.Mapper.(*typeMapper)
+	if !ok {
+		return s
+	}
+	for i := len(tm.Mappers) - 1; i >= 0; i-- {
+		m := tm.Mappers[i]
+		for _, toRmMap := range mapper {
+			if reflect.TypeOf(m) == reflect.TypeOf(toRmMap) {
+				tm.Mappers = append(tm.Mappers[:i], tm.Mappers[i+1:]...)
+			}
+		}
+	}
+	return s
+}
+
 func (s *Schemas) MustImport(version *APIVersion, obj interface{}, externalOverrides ...interface{}) *Schemas {
 	if reflect.ValueOf(obj).Kind() == reflect.Ptr {
 		panic(fmt.Errorf("obj cannot be a pointer"))
