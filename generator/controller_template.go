@@ -49,6 +49,7 @@ type {{.schema.CodeName}}Lister interface {
 }
 
 type {{.schema.CodeName}}Controller interface {
+	Generic() controller.GenericController
 	Informer() cache.SharedIndexInformer
 	Lister() {{.schema.CodeName}}Lister
 	AddHandler(name string, handler {{.schema.CodeName}}HandlerFunc)
@@ -109,6 +110,10 @@ func (l *{{.schema.ID}}Lister) Get(namespace, name string) (*{{.prefix}}{{.schem
 
 type {{.schema.ID}}Controller struct {
 	controller.GenericController
+}
+
+func (c *{{.schema.ID}}Controller) Generic() controller.GenericController {
+	return c.GenericController
 }
 
 func (c *{{.schema.ID}}Controller) Lister() {{.schema.CodeName}}Lister {
