@@ -8,7 +8,7 @@ import (
 
 	"github.com/rancher/norman/api"
 	"github.com/rancher/norman/controller"
-	"github.com/rancher/norman/leader12"
+	"github.com/rancher/norman/leader"
 	"github.com/rancher/norman/pkg/kwrapper/k3s"
 	"github.com/rancher/norman/pkg/kwrapper/k8s"
 	"github.com/rancher/norman/pkg/remotedialer"
