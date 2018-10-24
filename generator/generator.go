@@ -2,7 +2,6 @@ package generator
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -502,14 +501,6 @@ func deepCopyGen(workDir, pkg string) error {
 				},
 			}
 		})
-}
-
-type noInitGenerator struct {
-	generator.Generator
-}
-
-func (n *noInitGenerator) Init(*generator.Context, io.Writer) error {
-	return nil
 }
 
 func isObjectOrList(t *gengotypes.Type) bool {
