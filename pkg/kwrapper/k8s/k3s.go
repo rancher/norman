@@ -1,4 +1,4 @@
-// +build k3s
+// +build k8s
 
 package k8s
 
@@ -13,9 +13,13 @@ import (
 )
 
 func getEmbedded(ctx context.Context) (bool, context.Context, *rest.Config, error) {
+	var (
+		err error
+	)
+
 	sc, ok := ctx.Value(serverConfig).(*server.ServerConfig)
 	if !ok {
-		ctx, sc, _, err = NewK3sConfig(ctx, "./k3s", nil)
+		ctx, sc, _, err = NewK3sConfig(ctx, "./management-state", nil)
 		if err != nil {
 			return false, ctx, nil, err
 		}
@@ -23,15 +27,14 @@ func getEmbedded(ctx context.Context) (bool, context.Context, *rest.Config, erro
 	}
 
 	if len(sc.ETCDEndpoints) == 0 {
-		etcdEndpoints, err := etcd.RunETCD(ctx)
+		etcdEndpoints, err := etcd.RunETCD(ctx, sc.DataDir)
 		if err != nil {
-			return ctx, nil, nil, err
+			return false, ctx, nil, err
 		}
 		sc.ETCDEndpoints = etcdEndpoints
 	}
 
-	err := server.Server(ctx, sc)
-	if err != nil {
+	if err = server.Server(ctx, sc); err != nil {
 		return false, ctx, nil, err
 	}
 

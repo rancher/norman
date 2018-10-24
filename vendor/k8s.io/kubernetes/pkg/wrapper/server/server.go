@@ -182,8 +182,6 @@ func apiServer(ctx context.Context, config *ServerConfig) (authenticator.Request
 	s.KubeletConfig.CertFile = config.NodeCert
 	s.KubeletConfig.KeyFile = config.NodeKey
 
-	os.Chdir(config.DataDir)
-
 	sc, err := app.Complete(s)
 	if err != nil {
 		return nil, nil, err

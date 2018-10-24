@@ -4,10 +4,12 @@ package etcd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,9 +18,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func RunETCD(ctx context.Context) ([]string, error) {
+func RunETCD(ctx context.Context, dataDir string) ([]string, error) {
 	endpoint := "http://localhost:2379"
-	go runEtcd(ctx, []string{"--data-dir=./etcd"})
+
+	go runEtcd(ctx, []string{"etcd", fmt.Sprintf("--data-dir=%s", filepath.Join(dataDir, "etcd"))})
 
 	if err := checkEtcd(endpoint); err != nil {
 		return nil, errors.Wrap(err, "waiting on etcd")

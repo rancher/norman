@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/ibuildthecloud/kvsql/clientv3/driver"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
