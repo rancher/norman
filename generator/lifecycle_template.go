@@ -5,6 +5,7 @@ var lifecycleTemplate = `package {{.schema.Version.Version}}
 import (
 	{{.importPackage}}
 	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/lifecycle"
 )
 
@@ -45,11 +46,12 @@ func (w *{{.schema.ID}}LifecycleAdapter) Updated(obj runtime.Object) (runtime.Ob
 func New{{.schema.CodeName}}LifecycleAdapter(name string, clusterScoped bool, client {{.schema.CodeName}}Interface, l {{.schema.CodeName}}Lifecycle) {{.schema.CodeName}}HandlerFunc {
 	adapter := &{{.schema.ID}}LifecycleAdapter{lifecycle: l}
 	syncFn := lifecycle.NewObjectLifecycleAdapter(name, clusterScoped, adapter, client.ObjectClient())
-	return func(key string, obj *{{.prefix}}{{.schema.CodeName}}) error {
-		if obj == nil {
-			return syncFn(key, nil)
+	return func(key string, obj *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
+		newObj, err := syncFn(key, obj)
+		if o, ok := newObj.(*{{.prefix}}{{.schema.CodeName}}); ok {
+			return o, err
 		}
-		return syncFn(key, obj)
+		return nil, err
 	}
 }
 `
