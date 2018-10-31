@@ -12,7 +12,6 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/wrapper/server"
 )
 
 type ClientFactory func(context.Context, rest.Config) (context.Context, controller.Starter, error)
@@ -20,19 +19,21 @@ type ClientFactory func(context.Context, rest.Config) (context.Context, controll
 type ControllerRegister func(ctx context.Context) error
 
 type Config struct {
-	Name                string
-	DisableAPI          bool
-	Schemas             []*types.Schemas
-	CRDs                map[*types.APIVersion][]string
-	Clients             []ClientFactory
-	ClientGetter        proxy.ClientGetter
-	CRDStorageContext   types.StorageContext
-	K8sClient           kubernetes.Interface
-	APIExtClient        clientset.Interface
-	Config              *rest.Config
-	IgnoredKubConfigEnv bool
-	Threadiness         int
-	K3s                 K3sConfig
+	Name                 string
+	DisableAPI           bool
+	Schemas              []*types.Schemas
+	CRDs                 map[*types.APIVersion][]string
+	Clients              []ClientFactory
+	ClientGetter         proxy.ClientGetter
+	CRDStorageContext    types.StorageContext
+	K8sClient            kubernetes.Interface
+	APIExtClient         clientset.Interface
+	Config               *rest.Config
+	LeaderLockNamespace  string
+	KubeConfig           string
+	IgnoredKubeConfigEnv bool
+	Threadiness          int
+	K3s                  K3sConfig
 
 	GlobalSetup func(context.Context) (context.Context, error)
 	MasterSetup func(context.Context) (context.Context, error)
@@ -59,11 +60,12 @@ type Runtime struct {
 	UnversionedClient rest.Interface
 	APIHandler        http.Handler
 	K3sTunnelServer   http.Handler
-	K3sServerConfig   *server.ServerConfig
+	K3sServerConfig   interface{}
 	Embedded          bool
 }
 
 type Options struct {
+	KubeConfig         string
 	K8sMode            string
 	DisableControllers bool
 }

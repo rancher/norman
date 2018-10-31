@@ -130,7 +130,7 @@ func (c *Config) registerControllers(ctx context.Context, controllers []Controll
 }
 
 func (c *Config) masterControllers(ctx context.Context, r *Runtime) {
-	leader.RunOrDie(ctx, c.Name, c.K8sClient, func(ctx context.Context) {
+	leader.RunOrDie(ctx, c.LeaderLockNamespace, c.Name, c.K8sClient, func(ctx context.Context) {
 		var (
 			err      error
 			starters []controller.Starter
@@ -170,6 +170,10 @@ func (c *Config) defaults(ctx context.Context, r *Runtime, opts Options) (contex
 		c.Threadiness = 5
 	}
 
+	if opts.KubeConfig != "" {
+		c.KubeConfig = opts.KubeConfig
+	}
+
 	if c.Config == nil {
 		mode := "auto"
 		if opts.K8sMode != "" {
@@ -177,7 +181,9 @@ func (c *Config) defaults(ctx context.Context, r *Runtime, opts Options) (contex
 		}
 
 		envConfig := os.Getenv("KUBECONFIG")
-		if c.IgnoredKubConfigEnv {
+		if c.KubeConfig != "" {
+			envConfig = c.KubeConfig
+		} else if c.IgnoredKubeConfigEnv {
 			envConfig = ""
 		}
 
