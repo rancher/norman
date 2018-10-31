@@ -9,7 +9,6 @@ import (
 	"github.com/rancher/norman/api"
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/leader"
-	"github.com/rancher/norman/pkg/kwrapper/k3s"
 	"github.com/rancher/norman/pkg/kwrapper/k8s"
 	"github.com/rancher/norman/pkg/remotedialer"
 	"github.com/rancher/norman/store/crd"
@@ -26,14 +25,20 @@ func GetServer(ctx context.Context) *Server {
 	return ctx.Value(serverContextKey{}).(*Server)
 }
 
-func (c *Config) Build(ctx context.Context, opts Options) (context.Context, *Server, error) {
+func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Server, error) {
 	var (
 		err      error
 		starters []controller.Starter
 	)
 
 	if c.Name == "" {
-		return ctx, nil, errors.New("Name must be set on norman.Config")
+		return ctx, nil, errors.New("name must be set on norman.Config")
+	}
+
+	if opts == nil {
+		opts = &Options{
+			K8sMode: "external",
+		}
 	}
 
 	r := &Runtime{
@@ -47,7 +52,7 @@ func (c *Config) Build(ctx context.Context, opts Options) (context.Context, *Ser
 
 	ctx = context.WithValue(ctx, serverContextKey{}, server)
 
-	ctx, err = c.defaults(ctx, r, opts)
+	ctx, err = c.defaults(ctx, r, *opts)
 	if err != nil {
 		return ctx, nil, err
 	}
@@ -75,7 +80,7 @@ func (c *Config) Build(ctx context.Context, opts Options) (context.Context, *Ser
 	}
 
 	if !opts.DisableControllers {
-		go c.masterControllers(ctx, r, opts)
+		go c.masterControllers(ctx, r)
 	}
 
 	if !c.DisableAPI {
@@ -124,7 +129,7 @@ func (c *Config) registerControllers(ctx context.Context, controllers []Controll
 	return nil
 }
 
-func (c *Config) masterControllers(ctx context.Context, r *Runtime, opts Options) {
+func (c *Config) masterControllers(ctx context.Context, r *Runtime) {
 	leader.RunOrDie(ctx, c.Name, c.K8sClient, func(ctx context.Context) {
 		var (
 			err      error
@@ -177,7 +182,7 @@ func (c *Config) defaults(ctx context.Context, r *Runtime, opts Options) (contex
 		}
 
 		if c.K3s.DataDir != "" && c.K3s.RemoteDialerAuthorizer != nil {
-			ctx, r.K3sServerConfig, r.K3sTunnelServer, err = k3s.NewConfig(ctx, c.K3s.DataDir, c.K3s.RemoteDialerAuthorizer)
+			ctx, r.K3sServerConfig, r.K3sTunnelServer, err = k8s.NewK3sConfig(ctx, c.K3s.DataDir, c.K3s.RemoteDialerAuthorizer)
 			if err != nil {
 				return ctx, err
 			}
