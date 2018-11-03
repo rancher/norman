@@ -10,6 +10,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/pkg/wrapper/server"
+
+	// Embed kubectl
+	_ "github.com/rancher/norman/pkg/kwrapper/kubectl"
 )
 
 func getEmbedded(ctx context.Context) (bool, context.Context, *rest.Config, error) {
