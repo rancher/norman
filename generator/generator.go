@@ -361,7 +361,7 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 	return gofmt(baseDir, k8sOutputPackage)
 }
 
-func Generate(schemas *types.Schemas, backendTypes map[string]bool, cattleOutputPackage, k8sOutputPackage string) error {
+func Generate(schemas *types.Schemas, foreignTypes map[string]bool, cattleOutputPackage, k8sOutputPackage string) error {
 	baseDir := args.DefaultSourceTree()
 	cattleDir := path.Join(baseDir, cattleOutputPackage)
 	k8sDir := path.Join(baseDir, k8sOutputPackage)
@@ -382,7 +382,7 @@ func Generate(schemas *types.Schemas, backendTypes map[string]bool, cattleOutput
 			continue
 		}
 
-		_, backendType := backendTypes[schema.ID]
+		_, backendType := foreignTypes[schema.ID]
 
 		if cattleDir != "" {
 			if err := generateType(cattleDir, schema, schemas); err != nil {

@@ -41,7 +41,7 @@ type {{.schema.CodeName}}List struct {
 	Items             []{{.prefix}}{{.schema.CodeName}}
 }
 
-type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
+type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.prefix}}{{.schema.CodeName}}) (runtime.Object, error)
 
 type {{.schema.CodeName}}Lister interface {
 	List(namespace string, selector labels.Selector) (ret []*{{.prefix}}{{.schema.CodeName}}, err error)
