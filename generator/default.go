@@ -1,10 +1,12 @@
 package generator
 
 import (
+	"fmt"
 	"path"
 	"strings"
 
 	"github.com/rancher/norman/types"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -12,7 +14,7 @@ var (
 	baseK8s    = "apis"
 )
 
-func DefaultGenerate(schemas *types.Schemas, pkgPath string, publicAPI bool, backendTypes map[string]bool) error {
+func DefaultGenerate(schemas *types.Schemas, pkgPath string, publicAPI bool, foreignTypes map[string]bool) error {
 	version := getVersion(schemas)
 	group := strings.Split(version.Group, ".")[0]
 
@@ -22,11 +24,29 @@ func DefaultGenerate(schemas *types.Schemas, pkgPath string, publicAPI bool, bac
 	}
 	k8sOutputPackage := path.Join(pkgPath, baseK8s, version.Group, version.Version)
 
-	if err := Generate(schemas, backendTypes, cattleOutputPackage, k8sOutputPackage); err != nil {
+	if err := Generate(schemas, foreignTypes, cattleOutputPackage, k8sOutputPackage); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func ControllersForForeignTypes(baseOutputPackage string, gv schema.GroupVersion, nsObjs []interface{}, objs []interface{}) error {
+	version := gv.Version
+	group := gv.Group
+	groupPath := group
+
+	if groupPath == "" {
+		groupPath = "core"
+	}
+
+	k8sOutputPackage := path.Join(baseOutputPackage, baseK8s, groupPath, version)
+
+	return GenerateControllerForTypes(&types.APIVersion{
+		Version: version,
+		Group:   group,
+		Path:    fmt.Sprintf("/k8s/%s-%s", groupPath, version),
+	}, k8sOutputPackage, nsObjs, objs)
 }
 
 func getVersion(schemas *types.Schemas) *types.APIVersion {
