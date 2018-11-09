@@ -361,7 +361,7 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 	return gofmt(baseDir, k8sOutputPackage)
 }
 
-func Generate(schemas *types.Schemas, foreignTypes map[string]bool, cattleOutputPackage, k8sOutputPackage string) error {
+func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutputPackage, k8sOutputPackage string) error {
 	baseDir := args.DefaultSourceTree()
 	cattleDir := path.Join(baseDir, cattleOutputPackage)
 	k8sDir := path.Join(baseDir, k8sOutputPackage)
@@ -382,7 +382,7 @@ func Generate(schemas *types.Schemas, foreignTypes map[string]bool, cattleOutput
 			continue
 		}
 
-		_, backendType := foreignTypes[schema.ID]
+		_, privateType := privateTypes[schema.ID]
 
 		if cattleDir != "" {
 			if err := generateType(cattleDir, schema, schemas); err != nil {
@@ -390,7 +390,7 @@ func Generate(schemas *types.Schemas, foreignTypes map[string]bool, cattleOutput
 			}
 		}
 
-		if backendType ||
+		if privateType ||
 			(contains(schema.CollectionMethods, http.MethodGet) &&
 				!strings.HasPrefix(schema.PkgName, "k8s.io") &&
 				!strings.Contains(schema.PkgName, "/vendor/")) {
@@ -403,7 +403,7 @@ func Generate(schemas *types.Schemas, foreignTypes map[string]bool, cattleOutput
 			}
 		}
 
-		if !backendType {
+		if !privateType {
 			cattleClientTypes = append(cattleClientTypes, schema)
 		}
 	}

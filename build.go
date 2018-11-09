@@ -68,6 +68,12 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 		return ctx, nil, err
 	}
 
+	if c.CustomizeSchemas != nil {
+		if err := c.CustomizeSchemas(ctx, c.ClientGetter, r.AllSchemas); err != nil {
+			return ctx, nil, err
+		}
+	}
+
 	if c.GlobalSetup != nil {
 		ctx, err = c.GlobalSetup(ctx)
 		if err != nil {
@@ -80,7 +86,7 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 	}
 
 	if !opts.DisableControllers {
-		go c.masterControllers(ctx, r)
+		go c.masterControllers(ctx, starters, r)
 	}
 
 	if !c.DisableAPI {
@@ -99,7 +105,7 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 }
 
 func (c *Config) apiServer(ctx context.Context, r *Runtime) error {
-	if c.K3s.RemoteDialerAuthorizer != nil {
+	if c.K3s.RemoteDialerAuthorizer != nil && r.K3sTunnelServer == nil {
 		r.K3sTunnelServer = remotedialer.New(c.K3s.RemoteDialerAuthorizer, remotedialer.DefaultErrorWriter)
 	}
 
@@ -129,17 +135,11 @@ func (c *Config) registerControllers(ctx context.Context, controllers []Controll
 	return nil
 }
 
-func (c *Config) masterControllers(ctx context.Context, r *Runtime) {
+func (c *Config) masterControllers(ctx context.Context, starters []controller.Starter, r *Runtime) {
 	leader.RunOrDie(ctx, c.LeaderLockNamespace, c.Name, c.K8sClient, func(ctx context.Context) {
 		var (
-			err      error
-			starters []controller.Starter
+			err error
 		)
-
-		ctx, starters, err = c.clients(ctx, r)
-		if err != nil {
-			logrus.Fatalf("failed to create master clients: %v", err)
-		}
 
 		if c.MasterSetup != nil {
 			ctx, err = c.MasterSetup(ctx)
