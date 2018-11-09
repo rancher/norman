@@ -68,6 +68,12 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 		return ctx, nil, err
 	}
 
+	if c.CustomizeSchemas != nil {
+		if err := c.CustomizeSchemas(ctx, c.ClientGetter, r.AllSchemas); err != nil {
+			return ctx, nil, err
+		}
+	}
+
 	if c.GlobalSetup != nil {
 		ctx, err = c.GlobalSetup(ctx)
 		if err != nil {

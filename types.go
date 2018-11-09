@@ -35,10 +35,11 @@ type Config struct {
 	Threadiness          int
 	K3s                  K3sConfig
 
-	GlobalSetup func(context.Context) (context.Context, error)
-	MasterSetup func(context.Context) (context.Context, error)
-	PreStart    func(context.Context) error
-	APISetup    func(context.Context, *api.Server) error
+	CustomizeSchemas func(context.Context, proxy.ClientGetter, *types.Schemas) error
+	GlobalSetup      func(context.Context) (context.Context, error)
+	MasterSetup      func(context.Context) (context.Context, error)
+	PreStart         func(context.Context) error
+	APISetup         func(context.Context, *api.Server) error
 
 	PerServerControllers []ControllerRegister
 	MasterControllers    []ControllerRegister
