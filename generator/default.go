@@ -14,7 +14,7 @@ var (
 	baseK8s    = "apis"
 )
 
-func DefaultGenerate(schemas *types.Schemas, pkgPath string, publicAPI bool, foreignTypes map[string]bool) error {
+func DefaultGenerate(schemas *types.Schemas, pkgPath string, publicAPI bool, privateTypes map[string]bool) error {
 	version := getVersion(schemas)
 	group := strings.Split(version.Group, ".")[0]
 
@@ -24,7 +24,7 @@ func DefaultGenerate(schemas *types.Schemas, pkgPath string, publicAPI bool, for
 	}
 	k8sOutputPackage := path.Join(pkgPath, baseK8s, version.Group, version.Version)
 
-	if err := Generate(schemas, foreignTypes, cattleOutputPackage, k8sOutputPackage); err != nil {
+	if err := Generate(schemas, privateTypes, cattleOutputPackage, k8sOutputPackage); err != nil {
 		return err
 	}
 
