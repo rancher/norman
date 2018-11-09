@@ -105,7 +105,7 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 }
 
 func (c *Config) apiServer(ctx context.Context, r *Runtime) error {
-	if c.K3s.RemoteDialerAuthorizer != nil {
+	if c.K3s.RemoteDialerAuthorizer != nil && r.K3sTunnelServer == nil {
 		r.K3sTunnelServer = remotedialer.New(c.K3s.RemoteDialerAuthorizer, remotedialer.DefaultErrorWriter)
 	}
 
