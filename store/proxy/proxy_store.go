@@ -209,7 +209,7 @@ func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 }
 
 func (s *Store) retryList(namespace string, apiContext *types.APIContext) (*unstructured.UnstructuredList, error) {
-	resultList := &unstructured.UnstructuredList{}
+	var resultList *unstructured.UnstructuredList
 	k8sClient, err := s.k8sClient(apiContext)
 	if err != nil {
 		return nil, err
