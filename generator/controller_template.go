@@ -349,12 +349,12 @@ func (n *{{.schema.ID}}Client2) Cache() {{.schema.CodeName}}ClientCache {
 
 func (n *{{.schema.ID}}Client2) OnCreate(ctx context.Context, name string, sync {{.schema.CodeName}}ChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &{{.schema.ID}}LifecycleDelegate{create: sync})
+	n.iface.AddLifecycle(ctx, name+"-create", &{{.schema.ID}}LifecycleDelegate{create: sync})
 }
 
 func (n *{{.schema.ID}}Client2) OnChange(ctx context.Context, name string, sync {{.schema.CodeName}}ChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &{{.schema.ID}}LifecycleDelegate{update: sync})
+	n.iface.AddLifecycle(ctx, name+"-change", &{{.schema.ID}}LifecycleDelegate{update: sync})
 }
 
 func (n *{{.schema.ID}}Client2) OnRemove(ctx context.Context, name string, sync {{.schema.CodeName}}ChangeHandlerFunc) {
@@ -424,10 +424,6 @@ func (n *{{.schema.ID}}LifecycleDelegate) Remove(obj *{{.prefix}}{{.schema.CodeN
 		return obj, nil
 	}
 	return n.remove(obj)
-}
-
-func (n *{{.schema.ID}}LifecycleDelegate) HasUpdated() bool {
-	return n.remove != nil
 }
 
 func (n *{{.schema.ID}}LifecycleDelegate) Updated(obj *{{.prefix}}{{.schema.CodeName}}) (runtime.Object, error) {

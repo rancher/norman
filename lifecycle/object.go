@@ -26,7 +26,6 @@ type ObjectLifecycle interface {
 type ObjectLifecycleCondition interface {
 	HasCreate() bool
 	HasFinalize() bool
-	HasUpdated() bool
 }
 
 type objectLifecycleAdapter struct {
@@ -86,6 +85,10 @@ func (o *objectLifecycleAdapter) update(name string, orig, obj runtime.Object) (
 }
 
 func (o *objectLifecycleAdapter) finalize(obj runtime.Object) (runtime.Object, bool, error) {
+	if !o.hasFinalize() {
+		return obj, true, nil
+	}
+
 	metadata, err := meta.Accessor(obj)
 	if err != nil {
 		return obj, false, err
@@ -173,9 +176,10 @@ func (o *objectLifecycleAdapter) record(obj runtime.Object, f func(runtime.Objec
 		return obj, err
 	}
 
-	obj = obj.DeepCopyObject()
+	origObj := obj
+	obj = origObj.DeepCopyObject()
 	if newObj, err := f(obj); err != nil {
-		newObj, _ = o.update(metadata.GetName(), obj, newObj)
+		newObj, _ = o.update(metadata.GetName(), origObj, newObj)
 		return newObj, err
 	} else if newObj != nil {
 		newMetadata, err := meta.Accessor(newObj)
@@ -184,7 +188,7 @@ func (o *objectLifecycleAdapter) record(obj runtime.Object, f func(runtime.Objec
 			return newObj, nil
 		}
 		if newMetadata.GetResourceVersion() == metadata.GetResourceVersion() {
-			return o.update(metadata.GetName(), obj, newObj)
+			return o.update(metadata.GetName(), origObj, newObj)
 		}
 		return newObj, nil
 	}
@@ -213,6 +217,11 @@ func (o *objectLifecycleAdapter) create(obj runtime.Object) (runtime.Object, boo
 	}
 
 	obj, err = o.record(obj, o.lifecycle.Create)
+	if err != nil {
+		return obj, false, err
+	}
+
+	obj, err = o.setInitialized(obj)
 	return obj, false, err
 }
 
