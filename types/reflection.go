@@ -289,7 +289,9 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 			fieldType.Kind() == reflect.Uint32 ||
 			fieldType.Kind() == reflect.Int32 ||
 			fieldType.Kind() == reflect.Uint64 ||
-			fieldType.Kind() == reflect.Int64 {
+			fieldType.Kind() == reflect.Int64 ||
+			fieldType.Kind() == reflect.Float32 ||
+			fieldType.Kind() == reflect.Float64 {
 			schemaField.Nullable = false
 			schemaField.Default = 0
 		}
@@ -310,6 +312,12 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 			switch schemaField.Type {
 			case "int":
 				n, err := convert.ToNumber(schemaField.Default)
+				if err != nil {
+					return err
+				}
+				schemaField.Default = n
+			case "float":
+				n, err := convert.ToFloat(schemaField.Default)
 				if err != nil {
 					return err
 				}
@@ -446,6 +454,10 @@ func (s *Schemas) determineSchemaType(version *APIVersion, t reflect.Type) (stri
 		fallthrough
 	case reflect.Int64:
 		return "int", nil
+	case reflect.Float32:
+		fallthrough
+	case reflect.Float64:
+		return "float", nil
 	case reflect.Interface:
 		return "json", nil
 	case reflect.Map:
