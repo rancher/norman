@@ -83,6 +83,9 @@ func (s *Schemas) newSchemaFromType(version *APIVersion, t reflect.Type, typeNam
 		CollectionActions: map[string]Action{},
 	}
 
+	s.processingTypes[t] = schema
+	defer delete(s.processingTypes, t)
+
 	if err := s.readFields(schema, t); err != nil {
 		return nil, err
 	}
@@ -146,6 +149,11 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 	existing := s.Schema(version, typeName)
 	if existing != nil {
 		return existing, nil
+	}
+
+	if s, ok := s.processingTypes[t]; ok {
+		logrus.Debugf("Returning half built schema %s for %v", typeName, t)
+		return s, nil
 	}
 
 	logrus.Debugf("Inspecting schema %s for %v", typeName, t)
