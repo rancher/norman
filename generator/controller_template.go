@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 )
@@ -291,6 +292,7 @@ type {{.schema.CodeName}}Client interface {
     Enqueue(namespace, name string)
 
 	Generic() controller.GenericController
+    ObjectClient() *objectclient.ObjectClient
 	Interface() {{.schema.CodeName}}Interface
 }
 
@@ -309,6 +311,10 @@ func (n *{{.schema.ID}}Client2) Interface() {{.schema.CodeName}}Interface {
 
 func (n *{{.schema.ID}}Client2) Generic() controller.GenericController {
 	return n.iface.Controller().Generic()
+}
+
+func (n *{{.schema.ID}}Client2) ObjectClient() *objectclient.ObjectClient {
+	return n.Interface().ObjectClient()
 }
 
 func (n *{{.schema.ID}}Client2) Enqueue(namespace, name string) {
