@@ -35,6 +35,13 @@ var (
 	}
 )
 
+func New{{.schema.CodeName}}(namespace, name string, obj {{.prefix}}{{.schema.CodeName}}) *{{.prefix}}{{.schema.CodeName}} {
+	obj.APIVersion, obj.Kind = {{.schema.CodeName}}GroupVersionKind.ToAPIVersionAndKind()
+	obj.Name = name
+	obj.Namespace = namespace
+	return &obj
+}
+
 type {{.schema.CodeName}}List struct {
 	metav1.TypeMeta   %BACK%json:",inline"%BACK%
 	metav1.ListMeta   %BACK%json:"metadata,omitempty"%BACK%
