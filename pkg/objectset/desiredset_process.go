@@ -39,7 +39,7 @@ func (o *DesiredSet) process(inputID, debugID string, set labels.Selector, gvk s
 	toCreate, toDelete, toUpdate := compareSets(existing, objs)
 	for _, k := range toCreate {
 		obj := objs[k]
-		err := prepareObjectForCreate(inputID, obj)
+		obj, err := prepareObjectForCreate(inputID, obj)
 		if err != nil {
 			o.err(errors.Wrapf(err, "failed to prepare create %s %s for %s", k, gvk, debugID))
 			continue
@@ -63,7 +63,7 @@ func (o *DesiredSet) process(inputID, debugID string, set labels.Selector, gvk s
 	}
 
 	for _, k := range toUpdate {
-		err := o.compareObjects(client.ObjectClient(), debugID, inputID, gvk, existing[k], objs[k], len(toCreate) > 0 || len(toDelete) > 0)
+		err := o.compareObjects(client.ObjectClient(), debugID, inputID, existing[k], objs[k], len(toCreate) > 0 || len(toDelete) > 0)
 		if err != nil {
 			o.err(errors.Wrapf(err, "failed to update %s %s for %s", k, gvk, debugID))
 			continue
