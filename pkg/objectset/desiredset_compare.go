@@ -8,13 +8,12 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/rancher/norman/objectclient"
+	"github.com/rancher/norman/types/convert"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,15 +38,16 @@ type patchCacheEntry struct {
 	lookup    strategicpatch.LookupPatchMeta
 }
 
-func prepareObjectForCreate(inputID string, obj runtime.Object) error {
+func prepareObjectForCreate(inputID string, obj runtime.Object) (runtime.Object, error) {
 	serialized, err := json.Marshal(obj)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	obj = obj.DeepCopyObject()
 	meta, err := meta.Accessor(obj)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	annotations := meta.GetAnnotations()
 	if annotations == nil {
@@ -58,53 +58,161 @@ func prepareObjectForCreate(inputID string, obj runtime.Object) error {
 	annotations[LabelApplied] = appliedToAnnotation(serialized)
 	meta.SetAnnotations(annotations)
 
-	return nil
+	return obj, nil
 }
 
-func (o *DesiredSet) compareObjects(client objectclient.GenericClient, debugID, inputID string, gvk schema.GroupVersionKind, oldObject, newObject runtime.Object, force bool) error {
+func originalAndModifiedForInputID(inputID string, oldMetadata v1.Object, newObject runtime.Object) ([]byte, []byte, error) {
+	original, err := getOriginal(inputID, oldMetadata)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newObject, err = prepareObjectForCreate(inputID, newObject)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	modified, err := json.Marshal(newObject)
+
+	return original, modified, err
+}
+
+func onlyKeys(data map[string]interface{}, keys ...string) bool {
+	for i, key := range keys {
+		if len(data) > 1 {
+			return false
+		} else if len(data) == 0 {
+			return true
+		}
+
+		value, ok := data[key]
+		if !ok {
+			return false
+		}
+
+		if i == len(keys)-1 {
+			return true
+		}
+
+		data = convert.ToMapInterface(value)
+	}
+
+	return false
+}
+
+func sanitizePatch(patch []byte) ([]byte, error) {
+	mod := false
+	data := map[string]interface{}{}
+	err := json.Unmarshal(patch, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := data["kind"]; ok {
+		mod = true
+		delete(data, "kind")
+	}
+
+	if _, ok := data["apiVersion"]; ok {
+		mod = true
+		delete(data, "apiVersion")
+	}
+
+	if deleted := removeCreationTimestamp(data); deleted {
+		mod = true
+	}
+
+	if onlyKeys(data, "metadata", "annotations", LabelInputID) {
+		return []byte("{}"), nil
+	}
+
+	if !mod {
+		return patch, nil
+	}
+
+	return json.Marshal(data)
+}
+
+func applyPatch(client objectclient.GenericClient, debugID, inputID string, oldObject, newObject runtime.Object) (bool, error) {
+	gvk := client.GroupVersionKind()
+
+	oldMetadata, err := meta.Accessor(oldObject)
+	if err != nil {
+		return false, err
+	}
+
+	original, modified, err := originalAndModifiedForInputID(inputID, oldMetadata, newObject)
+	if err != nil {
+		return false, err
+	}
+
+	current, err := json.Marshal(oldObject)
+	if err != nil {
+		return false, err
+	}
+
+	patchType, patch, err := doPatch(gvk, original, modified, current)
+	if err != nil {
+		return false, errors.Wrap(err, "patch generation")
+	}
+
+	if string(patch) == "{}" {
+		return false, nil
+	}
+
+	patch, err = sanitizePatch(patch)
+	if err != nil {
+		return false, err
+	}
+
+	if string(patch) == "{}" {
+		return false, nil
+	}
+
+	logrus.Debugf("DesiredSet - Patch %s %s/%s for %s -- [%s, %s, %s, %s]", gvk, oldMetadata.GetNamespace(), oldMetadata.GetName(), debugID,
+		patch, original, modified, current)
+
+	logrus.Debugf("DesiredSet - Updated %s %s/%s for %s -- %s %s", gvk, oldMetadata.GetNamespace(), oldMetadata.GetName(), debugID, patchType, patch)
+	_, err = client.Patch(oldMetadata.GetName(), oldObject, patchType, patch)
+
+	return true, err
+}
+
+func (o *DesiredSet) compareObjects(client objectclient.GenericClient, debugID, inputID string, oldObject, newObject runtime.Object, force bool) error {
 	oldMetadata, err := meta.Accessor(oldObject)
 	if err != nil {
 		return err
 	}
 
-	if !force && (o.owner != nil || len(o.objs.inputs) > 0) && oldMetadata.GetAnnotations()[LabelInputID] == inputID {
+	oldInputID := oldMetadata.GetAnnotations()[LabelInputID]
+
+	if !force && (o.owner != nil || len(o.objs.inputs) > 0) && oldInputID == inputID {
 		return nil
 	}
 
-	logrus.Infof("DesiredSet - Inspecting %s %s/%s for %s", gvk, oldMetadata.GetNamespace(), oldMetadata.GetName(), debugID)
-
-	original, err := getOriginal(inputID, oldMetadata)
-	if err != nil {
+	gvk := client.GroupVersionKind()
+	if ran, err := applyPatch(client, debugID, inputID, oldObject, newObject); err != nil {
 		return err
+	} else if !ran {
+		logrus.Debugf("DesiredSet - No change(2) %s %s/%s for %s", gvk, oldMetadata.GetNamespace(), oldMetadata.GetName(), debugID)
 	}
 
-	if err := prepareObjectForCreate(inputID, newObject); err != nil {
-		return err
+	return nil
+}
+
+func removeCreationTimestamp(data map[string]interface{}) bool {
+	metadata, ok := data["metadata"]
+	if !ok {
+		return false
 	}
 
-	modified, err := json.Marshal(newObject)
-	if err != nil {
-		return err
+	data = convert.ToMapInterface(metadata)
+	if _, ok := data["creationTimestamp"]; ok {
+		delete(data, "creationTimestamp")
+		return true
 	}
 
-	current, err := json.Marshal(oldObject)
-	if err != nil {
-		return err
-	}
-
-	patchType, patch, err := doPatch(gvk, original, modified, current)
-	if err != nil {
-		return errors.Wrap(err, "patch generation")
-	}
-
-	if string(patch) == "{}" || len(patch) < 2 {
-		logrus.Infof("DesiredSet - No change %s %s/%s for %s", gvk, oldMetadata.GetNamespace(), oldMetadata.GetName(), debugID)
-		return nil
-	}
-
-	logrus.Infof("DesiredSet - Updated %s %s/%s for %s -- patch -- %s", gvk, oldMetadata.GetNamespace(), oldMetadata.GetName(), debugID, patch)
-	_, err = client.Patch(oldMetadata.GetName(), oldObject, patchType, patch)
-	return err
+	return false
 }
 
 func getOriginal(inputID string, obj v1.Object) ([]byte, error) {
@@ -119,11 +227,14 @@ func getOriginal(inputID string, obj v1.Object) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := prepareObjectForCreate(inputID, mapObj); err != nil {
+	removeCreationTimestamp(mapObj.Object)
+
+	objCopy, err := prepareObjectForCreate(inputID, mapObj)
+	if err != nil {
 		return nil, err
 	}
 
-	return json.Marshal(mapObj)
+	return json.Marshal(objCopy)
 }
 
 func appliedFromAnnotation(str string) []byte {
