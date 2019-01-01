@@ -34,6 +34,14 @@ func (noopWorkqueueMetricsProvider) NewRetriesMetric(name string) workqueue.Coun
 	return noopMetric{}
 }
 
+func (noopWorkqueueMetricsProvider) NewLongestRunningProcessorMicrosecondsMetric(name string) workqueue.SettableGaugeMetric {
+	return noopMetric{}
+}
+
+func (noopWorkqueueMetricsProvider) NewUnfinishedWorkSecondsMetric(name string) workqueue.SettableGaugeMetric {
+	return noopMetric{}
+}
+
 type noopCacheMetricsProvider struct{}
 
 func (noopCacheMetricsProvider) NewListsMetric(name string) cache.CounterMetric { return noopMetric{} }
