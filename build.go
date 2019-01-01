@@ -9,14 +9,13 @@ import (
 	"github.com/rancher/norman/api"
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/leader"
-	"github.com/rancher/norman/pkg/kwrapper/k8s"
-	"github.com/rancher/norman/pkg/remotedialer"
 	"github.com/rancher/norman/store/crd"
 	"github.com/rancher/norman/store/proxy"
 	"github.com/rancher/norman/types"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type serverContextKey struct{}
@@ -36,9 +35,7 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 	}
 
 	if opts == nil {
-		opts = &Options{
-			K8sMode: "external",
-		}
+		opts = &Options{}
 	}
 
 	r := &Runtime{
@@ -89,7 +86,7 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 		go c.masterControllers(ctx, starters, r)
 	}
 
-	if !c.DisableAPI {
+	if c.EnableAPI {
 		if err := c.apiServer(ctx, r); err != nil {
 			return ctx, nil, err
 		}
@@ -109,10 +106,6 @@ func (c *Config) Build(ctx context.Context, opts *Options) (context.Context, *Se
 }
 
 func (c *Config) apiServer(ctx context.Context, r *Runtime) error {
-	if c.K3s.RemoteDialerAuthorizer != nil && r.K3sTunnelServer == nil {
-		r.K3sTunnelServer = remotedialer.New(c.K3s.RemoteDialerAuthorizer, remotedialer.DefaultErrorWriter)
-	}
-
 	server := api.NewAPIServer()
 	if err := server.AddSchemas(r.AllSchemas); err != nil {
 		return err
@@ -179,11 +172,6 @@ func (c *Config) defaults(ctx context.Context, r *Runtime, opts Options) (contex
 	}
 
 	if c.Config == nil {
-		mode := "auto"
-		if opts.K8sMode != "" {
-			mode = opts.K8sMode
-		}
-
 		envConfig := os.Getenv("KUBECONFIG")
 		if c.KubeConfig != "" {
 			envConfig = c.KubeConfig
@@ -191,14 +179,7 @@ func (c *Config) defaults(ctx context.Context, r *Runtime, opts Options) (contex
 			envConfig = ""
 		}
 
-		if c.K3s.DataDir != "" && c.K3s.RemoteDialerAuthorizer != nil {
-			ctx, r.K3sServerConfig, r.K3sTunnelServer, err = k8s.NewK3sConfig(ctx, c.K3s.DataDir, c.K3s.RemoteDialerAuthorizer)
-			if err != nil {
-				return ctx, err
-			}
-		}
-
-		r.Embedded, ctx, c.Config, err = k8s.GetConfig(ctx, mode, envConfig)
+		c.Config, err = clientcmd.BuildConfigFromFlags("", envConfig)
 		if err != nil {
 			return ctx, err
 		}

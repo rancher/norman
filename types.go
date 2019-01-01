@@ -6,7 +6,6 @@ import (
 
 	"github.com/rancher/norman/api"
 	"github.com/rancher/norman/controller"
-	"github.com/rancher/norman/pkg/remotedialer"
 	"github.com/rancher/norman/store/proxy"
 	"github.com/rancher/norman/types"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -20,7 +19,7 @@ type ControllerRegister func(ctx context.Context) error
 
 type Config struct {
 	Name                 string
-	DisableAPI           bool
+	EnableAPI            bool
 	Schemas              []*types.Schemas
 	CRDs                 map[*types.APIVersion][]string
 	Clients              []ClientFactory
@@ -33,7 +32,6 @@ type Config struct {
 	KubeConfig           string
 	IgnoredKubeConfigEnv bool
 	Threadiness          int
-	K3s                  K3sConfig
 
 	CustomizeSchemas func(context.Context, proxy.ClientGetter, *types.Schemas) error
 	GlobalSetup      func(context.Context) (context.Context, error)
@@ -43,11 +41,6 @@ type Config struct {
 
 	PerServerControllers []ControllerRegister
 	MasterControllers    []ControllerRegister
-}
-
-type K3sConfig struct {
-	DataDir                string
-	RemoteDialerAuthorizer remotedialer.Authorizer
 }
 
 type Server struct {
@@ -60,13 +53,9 @@ type Runtime struct {
 	LocalConfig       *rest.Config
 	UnversionedClient rest.Interface
 	APIHandler        http.Handler
-	K3sTunnelServer   http.Handler
-	K3sServerConfig   interface{}
-	Embedded          bool
 }
 
 type Options struct {
 	KubeConfig         string
-	K8sMode            string
 	DisableControllers bool
 }
