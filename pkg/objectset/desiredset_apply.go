@@ -7,15 +7,15 @@ import (
 	"sort"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/client-go/util/flowcontrol"
-
 	"github.com/pkg/errors"
+	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/util/flowcontrol"
 )
 
 const (
@@ -27,8 +27,7 @@ const (
 )
 
 var (
-	ErrObjectSetDelay = errors.New("delaying object set apply")
-	hashOrder         = []string{
+	hashOrder = []string{
 		LabelID,
 		LabelGVK,
 		LabelName,
@@ -48,7 +47,7 @@ func (o *DesiredSet) getRateLimit(inputID string) flowcontrol.RateLimiter {
 	} else {
 		rl = rls[inputID]
 		if rl == nil {
-			rl = flowcontrol.NewTokenBucketRateLimiter(1.0/60.0, 10)
+			rl = flowcontrol.NewTokenBucketRateLimiter(4.0/60.0, 10)
 			rls[inputID] = rl
 		}
 	}
@@ -68,7 +67,7 @@ func (o *DesiredSet) Apply() error {
 
 	rl := o.getRateLimit(labelSet[LabelHash])
 	if rl != nil && !rl.TryAccept() {
-		return ErrObjectSetDelay
+		return errors2.NewConflict(schema.GroupResource{}, o.setID, errors.New("delaying object set"))
 	}
 
 	inputID := o.inputID(labelSet[LabelHash])
