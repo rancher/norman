@@ -46,6 +46,10 @@ func (t *Processor) AllowDiscovery(discovery discovery.DiscoveryInterface, restC
 	return t
 }
 
+func (t *Processor) Clients() map[schema.GroupVersionKind]Client {
+	return t.clients
+}
+
 func (t *Processor) Client(clients ...Client) *Processor {
 	// ensure cache is enabled
 	for _, client := range clients {

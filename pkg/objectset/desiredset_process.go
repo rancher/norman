@@ -13,17 +13,46 @@ import (
 	"github.com/sirupsen/logrus"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 var (
 	deletePolicy = v1.DeletePropagationBackground
 )
+
+func NewDiscoveredClient(gvk schema.GroupVersionKind, restConfig rest.Config, discovery discovery.DiscoveryInterface) (*objectclient.ObjectClient, error) {
+	resources, err := discovery.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, resource := range resources.APIResources {
+		if resource.Kind != gvk.Kind {
+			continue
+		}
+
+		if restConfig.NegotiatedSerializer == nil {
+			restConfig.NegotiatedSerializer = dynamic.NegotiatedSerializer
+		}
+
+		restClient, err := restwatch.UnversionedRESTClientFor(&restConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		objectClient := objectclient.NewObjectClient("", restClient, &resource, gvk, &objectclient.UnstructuredObjectFactory{})
+		return objectClient, nil
+	}
+
+	return nil, fmt.Errorf("failed to discover client for %s", gvk)
+}
 
 func (o *DesiredSet) getControllerAndObjectClient(debugID string, gvk schema.GroupVersionKind) (controller.GenericController, *objectclient.ObjectClient, error) {
 	client, ok := o.clients[gvk]
@@ -40,35 +69,13 @@ func (o *DesiredSet) getControllerAndObjectClient(debugID string, gvk schema.Gro
 		return nil, objectClient, nil
 	}
 
-	resources, err := o.discovery.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	objectClient, err := NewDiscoveredClient(gvk, o.restConfig, o.discovery)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrapf(err, "failed to find client for %s for %s", gvk, debugID)
 	}
 
-	for _, resource := range resources.APIResources {
-		if resource.Kind != gvk.Kind {
-			continue
-		}
-
-		restConfig := o.restConfig
-		if restConfig.NegotiatedSerializer == nil {
-			restConfig.NegotiatedSerializer = dynamic.NegotiatedSerializer
-		}
-
-		restClient, err := restwatch.UnversionedRESTClientFor(&restConfig)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		objectClient := objectclient.NewObjectClient("", restClient, &resource, gvk, &objectclient.UnstructuredObjectFactory{})
-		if o.discoveredClients == nil {
-			o.discoveredClients = map[schema.GroupVersionKind]*objectclient.ObjectClient{}
-		}
-		o.discoveredClients[gvk] = objectClient
-		return nil, objectClient, nil
-	}
-
-	return nil, nil, fmt.Errorf("failed to discover client for %s for %s", gvk, debugID)
+	o.AddDiscoveredClient(gvk, objectClient)
+	return nil, objectClient, nil
 }
 
 func (o *DesiredSet) process(inputID, debugID string, set labels.Selector, gvk schema.GroupVersionKind, objs map[objectKey]runtime.Object) {

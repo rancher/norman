@@ -24,6 +24,17 @@ type DesiredSet struct {
 	errs              []error
 }
 
+func (o *DesiredSet) AddDiscoveredClient(gvk schema.GroupVersionKind, client *objectclient.ObjectClient) {
+	if o.discoveredClients == nil {
+		o.discoveredClients = map[schema.GroupVersionKind]*objectclient.ObjectClient{}
+	}
+	o.discoveredClients[gvk] = client
+}
+
+func (o *DesiredSet) DiscoveredClients() map[schema.GroupVersionKind]*objectclient.ObjectClient {
+	return o.discoveredClients
+}
+
 func (o *DesiredSet) AddInjector(inj injectors.ConfigInjector) {
 	o.injectors = append(o.injectors, inj)
 }
