@@ -130,6 +130,28 @@ func (f *Factory) CreateCRDs(ctx context.Context, storageContext types.StorageCo
 	return schemaStatus, nil
 }
 
+func (f *Factory) DeleteCRD(storageContext types.StorageContext, schemas *types.Schemas, version *types.APIVersion, schemaID string) error {
+	schema := schemas.Schema(version, schemaID)
+	if schema == nil {
+		panic("can not find schema " + schemaID)
+	}
+
+	plural := strings.ToLower(schema.PluralName)
+	name := strings.ToLower(plural + "." + schema.Version.Group)
+
+	apiClient, err := f.ClientGetter.APIExtClient(nil, storageContext)
+	if err != nil {
+		return err
+	}
+
+	logrus.Infof("Deleting CRD %s", name)
+	err = apiClient.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(name, &metav1.DeleteOptions{})
+	if errors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
 func (f *Factory) waitCRD(ctx context.Context, apiClient clientset.Interface, crdName string, schema *types.Schema, schemaStatus map[*types.Schema]*apiext.CustomResourceDefinition) error {
 	logrus.Infof("Waiting for CRD %s to become available", crdName)
 	defer logrus.Infof("Done waiting for CRD %s to become available", crdName)
