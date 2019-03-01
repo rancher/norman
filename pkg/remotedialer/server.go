@@ -56,7 +56,7 @@ func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	logrus.Infof("Handling backend connection request [%s]", clientKey)
 
 	upgrader := websocket.Upgrader{
-		HandshakeTimeout: 5 * time.Second,
+		HandshakeTimeout: 30 * time.Second,
 		CheckOrigin:      func(r *http.Request) bool { return true },
 		Error:            s.errorWriter,
 	}
