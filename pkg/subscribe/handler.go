@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/rancher/norman/api/writer"
-	"github.com/rancher/norman/httperror"
-	"github.com/rancher/norman/parse"
-	"github.com/rancher/norman/types"
-	"github.com/rancher/norman/types/convert"
-	"github.com/rancher/norman/types/slice"
+	"github.com/rancher/norman/pkg/api/writer"
+	"github.com/rancher/norman/pkg/httperror"
+	"github.com/rancher/norman/pkg/parse"
+	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/pkg/types/slice"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -25,19 +25,19 @@ type Subscribe struct {
 	ProjectID     string `norman:"type=reference[/v3/schemas/project]"`
 }
 
-func Handler(apiContext *types.APIContext, _ types.RequestHandler) error {
-	err := handler(apiContext)
+func Handler(apiOp *types.APIOperation, _ types.RequestHandler) (interface{}, error) {
+	err := handler(apiOp)
 	if err != nil {
 		logrus.Errorf("Error during subscribe %v", err)
 	}
-	return err
+	return nil, err
 }
 
-func getMatchingSchemas(apiContext *types.APIContext) []*types.Schema {
-	resourceTypes := apiContext.Request.URL.Query()["resourceTypes"]
+func getMatchingSchemas(apiOp *types.APIOperation) []*types.Schema {
+	resourceTypes := apiOp.Request.URL.Query()["resourceTypes"]
 
 	var schemas []*types.Schema
-	for _, schema := range apiContext.Schemas.SchemasForVersion(*apiContext.Version) {
+	for _, schema := range apiOp.Schemas.Schemas() {
 		if !matches(resourceTypes, schema.ID) {
 			continue
 		}
@@ -49,21 +49,21 @@ func getMatchingSchemas(apiContext *types.APIContext) []*types.Schema {
 	return schemas
 }
 
-func handler(apiContext *types.APIContext) error {
-	schemas := getMatchingSchemas(apiContext)
+func handler(apiOp *types.APIOperation) error {
+	schemas := getMatchingSchemas(apiOp)
 	if len(schemas) == 0 {
 		return httperror.NewAPIError(httperror.NotFound, "no resources types matched")
 	}
 
-	c, err := upgrader.Upgrade(apiContext.Response, apiContext.Request, nil)
+	c, err := upgrader.Upgrade(apiOp.Response, apiOp.Request, nil)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
 
-	cancelCtx, cancel := context.WithCancel(apiContext.Request.Context())
+	cancelCtx, cancel := context.WithCancel(apiOp.Request.Context())
 	readerGroup, ctx := errgroup.WithContext(cancelCtx)
-	apiContext.Request = apiContext.Request.WithContext(ctx)
+	apiOp.Request = apiOp.Request.WithContext(ctx)
 
 	go func() {
 		for {
@@ -77,7 +77,7 @@ func handler(apiContext *types.APIContext) error {
 
 	events := make(chan map[string]interface{})
 	for _, schema := range schemas {
-		streamStore(ctx, readerGroup, apiContext, schema, events)
+		streamStore(ctx, readerGroup, apiOp, schema, events)
 	}
 
 	go func() {
@@ -105,10 +105,10 @@ func handler(apiContext *types.APIContext) error {
 			if item[".removed"] == true {
 				header = `{"name":"resource.remove","data":`
 			}
-			schema := apiContext.Schemas.Schema(apiContext.Version, convert.ToString(item["type"]))
+			schema := apiOp.Schemas.Schema(convert.ToString(item["type"]))
 			if schema != nil {
 				buffer := &bytes.Buffer{}
-				if err := jsonWriter.VersionBody(apiContext, &schema.Version, buffer, item); err != nil {
+				if err := jsonWriter.VersionBody(apiOp, buffer, item); err != nil {
 					cancel()
 					continue
 				}
@@ -146,10 +146,10 @@ func writeData(c *websocket.Conn, header string, buf []byte) error {
 	return messageWriter.Close()
 }
 
-func streamStore(ctx context.Context, eg *errgroup.Group, apiContext *types.APIContext, schema *types.Schema, result chan map[string]interface{}) {
+func streamStore(ctx context.Context, eg *errgroup.Group, apiOp *types.APIOperation, schema *types.Schema, result chan map[string]interface{}) {
 	eg.Go(func() error {
-		opts := parse.QueryOptions(apiContext, schema)
-		events, err := schema.Store.Watch(apiContext, schema, &opts)
+		opts := parse.QueryOptions(apiOp, schema)
+		events, err := schema.Store.Watch(apiOp, schema, &opts)
 		if err != nil || events == nil {
 			if err != nil {
 				logrus.Errorf("failed on subscribe %s: %v", schema.ID, err)
