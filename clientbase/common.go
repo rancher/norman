@@ -216,7 +216,9 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	if err != nil {
 		return result, err
 	}
-	defer resp.Body.Close()
+	defer func(closer io.Closer) {
+		closer.Close()
+	}(resp.Body)
 
 	if resp.StatusCode != 200 {
 		return result, NewAPIError(resp, opts.URL)
@@ -242,7 +244,9 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 		if err != nil {
 			return result, err
 		}
-		defer resp.Body.Close()
+		defer func(closer io.Closer) {
+			closer.Close()
+		}(resp.Body)
 
 		if resp.StatusCode != 200 {
 			return result, NewAPIError(resp, schemasURLs)
