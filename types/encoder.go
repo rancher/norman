@@ -1,6 +1,7 @@
 package types
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"regexp"
@@ -14,6 +15,13 @@ var (
 
 func JSONEncoder(writer io.Writer, v interface{}) error {
 	return json.NewEncoder(writer).Encode(v)
+}
+
+func JSONGzipEncoder(writer io.Writer, v interface{}) error {
+	gz := gzip.NewWriter(writer)
+	defer gz.Close()
+
+	return json.NewEncoder(gz).Encode(v)
 }
 
 func YAMLEncoder(writer io.Writer, v interface{}) error {

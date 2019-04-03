@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"sync"
 
 	"github.com/rancher/norman/api/access"
@@ -66,6 +67,10 @@ func NewAPIServer() *Server {
 				ContentType: "application/yaml",
 				Encoder:     types.YAMLEncoder,
 			},
+			"gzip": &writer.EncodingResponseWriter{
+				ContentType: "application/json",
+				Encoder:     types.JSONGzipEncoder,
+			},
 		},
 		SubContextAttributeProvider: &parse.DefaultSubContextAttributeProvider{},
 		Resolver:                    parse.DefaultResolver,
@@ -93,6 +98,9 @@ func NewAPIServer() *Server {
 func (s *Server) parser(rw http.ResponseWriter, req *http.Request) (*types.APIContext, error) {
 	ctx, err := parse.Parse(rw, req, s.Schemas, s.URLParser, s.Resolver)
 	ctx.ResponseWriter = s.ResponseWriters[ctx.ResponseFormat]
+	if ctx.ResponseFormat == "json" && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+		ctx.ResponseWriter = s.ResponseWriters["gzip"]
+	}
 	if ctx.ResponseWriter == nil {
 		ctx.ResponseWriter = s.ResponseWriters["json"]
 	}

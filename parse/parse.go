@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
-
 	"sort"
+	"strings"
 
 	"github.com/rancher/norman/api/builtin"
 	"github.com/rancher/norman/httperror"
@@ -89,6 +88,12 @@ func Parse(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, ur
 	result.Query = parsedURL.Query
 	if parsedURL.Method != "" {
 		result.Method = parsedURL.Method
+	}
+
+	// Prepare header for gzipping
+	if result.ResponseFormat == "json" && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+		result.Response.Header().Del("Content-Length")
+		result.Response.Header().Set("Content-Encoding", "gzip")
 	}
 
 	result.Version = parsedURL.Version
