@@ -2,6 +2,7 @@ package remotedialer
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -24,9 +25,20 @@ func connectToProxy(proxyURL string, headers http.Header, auth ConnectAuthorizer
 	if dialer == nil {
 		dialer = &websocket.Dialer{}
 	}
-	ws, _, err := dialer.Dial(proxyURL, headers)
+	ws, resp, err := dialer.Dial(proxyURL, headers)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to connect to proxy")
+		if err == websocket.ErrBadHandshake {
+			// The websocket library returns ErrBadHandshake when the server response
+			// to opening handshake is invalid. To facilitate troubleshooting we log
+			// a junk of the response body as the server might have written an error.
+			respBytes := make([]byte, 256)
+			io.ReadFull(resp.Body, respBytes)
+			resp.Body.Close()
+			logrus.WithFields(logrus.Fields{
+				"StatusCode": resp.StatusCode,
+				"Body":       string(respBytes),
+			}).Error("Invalid proxy response")
+		}
 		return err
 	}
 	defer ws.Close()
