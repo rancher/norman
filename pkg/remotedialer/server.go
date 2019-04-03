@@ -63,7 +63,8 @@ func (s *Server) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	wsConn, err := upgrader.Upgrade(rw, req, nil)
 	if err != nil {
-		s.errorWriter(rw, req, 400, errors.Wrapf(err, "Error during upgrade for host [%v]", clientKey))
+		// Upgrade method takes care of returning the error to the client
+		logrus.WithError(err).Errorf("Error during upgrade for host [%v]", clientKey)
 		return
 	}
 
