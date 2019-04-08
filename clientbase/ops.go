@@ -41,6 +41,9 @@ func (a *APIOperations) DoDelete(url string) error {
 	defer func() {
 		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
+		if tr, ok := a.Client.Transport.(*http.Transport); ok {
+			tr.CloseIdleConnections()
+		}
 	}()
 
 	if resp.StatusCode >= 300 {
@@ -75,7 +78,12 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		resp.Body.Close()
+		if tr, ok := a.Client.Transport.(*http.Transport); ok {
+			tr.CloseIdleConnections()
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		return NewAPIError(resp, url)
@@ -149,7 +157,12 @@ func (a *APIOperations) DoModify(method string, url string, createObj interface{
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		resp.Body.Close()
+		if tr, ok := a.Client.Transport.(*http.Transport); ok {
+			tr.CloseIdleConnections()
+		}
+	}()
 
 	if resp.StatusCode >= 300 {
 		return NewAPIError(resp, url)
@@ -356,7 +369,12 @@ func (a *APIOperations) doAction(
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		resp.Body.Close()
+		if tr, ok := a.Client.Transport.(*http.Transport); ok {
+			tr.CloseIdleConnections()
+		}
+	}()
 
 	if resp.StatusCode >= 300 {
 		return NewAPIError(resp, actionURL)

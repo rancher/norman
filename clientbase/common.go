@@ -196,6 +196,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			},
 		}
 		client.Transport = tr
+		defer tr.CloseIdleConnections()
 	}
 
 	if opts.Insecure {
@@ -205,6 +206,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			},
 		}
 		client.Transport = tr
+		defer tr.CloseIdleConnections()
 	}
 
 	req, err := http.NewRequest("GET", opts.URL, nil)
