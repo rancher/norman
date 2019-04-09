@@ -46,7 +46,7 @@ func New{{.schema.CodeName}}(namespace, name string, obj {{.prefix}}{{.schema.Co
 type {{.schema.CodeName}}List struct {
 	metav1.TypeMeta   %BACK%json:",inline"%BACK%
 	metav1.ListMeta   %BACK%json:"metadata,omitempty"%BACK%
-	Items             []{{.prefix}}{{.schema.CodeName}}
+	Items             []{{.prefix}}{{.schema.CodeName}} %BACK%json:"items"%BACK%
 }
 
 type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.prefix}}{{.schema.CodeName}}) (runtime.Object, error)
