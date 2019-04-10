@@ -468,7 +468,7 @@ func prepareDirs(dirs ...string) error {
 		}
 
 		for _, file := range files {
-			if strings.HasPrefix(file.Name(), "zz_generated") || strings.HasSuffix(file.Name(), "_mock_test.go") {
+			if strings.HasPrefix(file.Name(), "zz_generated") {
 				if err := os.Remove(path.Join(dir, file.Name())); err != nil {
 					return errors.Wrapf(err, "failed to delete %s", path.Join(dir, file.Name()))
 				}
@@ -566,7 +566,7 @@ func generateFakes(k8sDir string, controllers []*types.Schema) error {
 			return err
 		}
 		// create the file
-		filePath := path.Join(k8sDir, "fakes", "zz_generated_"+addUnderscore(controller.ID)+"_mock_test.go")
+		filePath := path.Join(k8sDir, "fakes", "zz_generated_"+addUnderscore(controller.ID)+"_mock.go")
 		err = ioutil.WriteFile(filePath, out.Bytes(), 0644)
 		if err != nil {
 			return err
