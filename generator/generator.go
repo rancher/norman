@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/matryer/moq/pkg/moq"
 	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
@@ -306,7 +308,9 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 	baseDir := args.DefaultSourceTree()
 	k8sDir := path.Join(baseDir, k8sOutputPackage)
 
-	if err := prepareDirs(k8sDir); err != nil {
+	fakeDir := path.Join(k8sDir, "fakes")
+
+	if err := prepareDirs(k8sDir, fakeDir); err != nil {
 		return err
 	}
 
@@ -358,6 +362,10 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 		return err
 	}
 
+	if err := generateFakes(k8sDir, controllers); err != nil {
+		return err
+	}
+
 	return gofmt(baseDir, k8sOutputPackage)
 }
 
@@ -370,7 +378,9 @@ func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutput
 		cattleDir = ""
 	}
 
-	if err := prepareDirs(cattleDir, k8sDir); err != nil {
+	fakeDir := path.Join(k8sDir, "fakes")
+
+	if err := prepareDirs(cattleDir, k8sDir, fakeDir); err != nil {
 		return err
 	}
 
@@ -426,6 +436,9 @@ func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutput
 		if err := generateScheme(false, k8sDir, &controllers[0].Version, controllers); err != nil {
 			return err
 		}
+		if err := generateFakes(k8sDir, controllers); err != nil {
+			return err
+		}
 	}
 
 	if err := gofmt(baseDir, k8sOutputPackage); err != nil {
@@ -455,7 +468,7 @@ func prepareDirs(dirs ...string) error {
 		}
 
 		for _, file := range files {
-			if strings.HasPrefix(file.Name(), "zz_generated") {
+			if strings.HasPrefix(file.Name(), "zz_generated") || strings.HasSuffix(file.Name(), "_mock_test.go") {
 				if err := os.Remove(path.Join(dir, file.Name())); err != nil {
 					return errors.Wrapf(err, "failed to delete %s", path.Join(dir, file.Name()))
 				}
@@ -530,4 +543,34 @@ func isObjectOrList(t *gengotypes.Type) bool {
 	}
 
 	return false
+}
+
+func generateFakes(k8sDir string, controllers []*types.Schema) error {
+	m, err := moq.New(k8sDir, "fakes")
+	if err != nil {
+		return err
+	}
+
+	for _, controller := range controllers {
+		var out bytes.Buffer
+
+		interfaceNames := []string{
+			controller.CodeName + "Lister",
+			controller.CodeName + "Controller",
+			controller.CodeName + "Interface",
+			controller.CodeNamePlural + "Getter",
+		}
+
+		err = m.Mock(&out, interfaceNames...)
+		if err != nil {
+			return err
+		}
+		// create the file
+		filePath := path.Join(k8sDir, "fakes", "zz_generated_"+addUnderscore(controller.ID)+"_mock_test.go")
+		err = ioutil.WriteFile(filePath, out.Bytes(), 0644)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
