@@ -146,6 +146,9 @@ func copyMapReplace(schema *types.Schema, src map[string]interface{}, replace bo
 	for k, v := range src {
 		if replace && schema != nil {
 			f := schema.ResourceFields[k]
+			if f.Type == "password" && v == "" {
+				continue
+			}
 			if f.Update {
 				continue
 			}
