@@ -8,6 +8,7 @@ import (
 	{{.importPackage}}
 	"github.com/rancher/norman/objectclient"
 	"github.com/rancher/norman/controller"
+	"github.com/rancher/norman/resource"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,7 +35,17 @@ var (
 {{- end }}
 		Kind:         {{.schema.CodeName}}GroupVersionKind.Kind,
 	}
+
+	{{.schema.CodeName}}GroupVersionResource = schema.GroupVersionResource{
+		Group:     GroupName,
+		Version:   Version,
+		Resource:  "{{.schema.PluralName | toLower}}",
+	}
 )
+
+func init() {
+	resource.Put({{.schema.CodeName}}GroupVersionResource)
+}
 
 func New{{.schema.CodeName}}(namespace, name string, obj {{.prefix}}{{.schema.CodeName}}) *{{.prefix}}{{.schema.CodeName}} {
 	obj.APIVersion, obj.Kind = {{.schema.CodeName}}GroupVersionKind.ToAPIVersionAndKind()
