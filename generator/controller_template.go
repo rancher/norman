@@ -74,7 +74,9 @@ type {{.schema.CodeName}}Controller interface {
 	Informer() cache.SharedIndexInformer
 	Lister() {{.schema.CodeName}}Lister
 	AddHandler(ctx context.Context, name string, handler {{.schema.CodeName}}HandlerFunc)
+	AddFeatureHandler(ctx context.Context, enabled func() bool, name string, sync {{.schema.CodeName}}HandlerFunc)
 	AddClusterScopedHandler(ctx context.Context, name, clusterName string, handler {{.schema.CodeName}}HandlerFunc)
+	AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, clusterName string, handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
 	Sync(ctx context.Context) error
 	Start(ctx context.Context, threadiness int) error
@@ -93,9 +95,13 @@ type {{.schema.CodeName}}Interface interface {
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
 	AddHandler(ctx context.Context, name string, sync {{.schema.CodeName}}HandlerFunc)
+	AddFeatureHandler(ctx context.Context, enabled func() bool, name string, sync {{.schema.CodeName}}HandlerFunc)
 	AddLifecycle(ctx context.Context, name string, lifecycle {{.schema.CodeName}}Lifecycle)
+	AddFeatureLifecycle(ctx context.Context, enabled func() bool, name string, lifecycle {{.schema.CodeName}}Lifecycle)
 	AddClusterScopedHandler(ctx context.Context, name, clusterName string, sync {{.schema.CodeName}}HandlerFunc)
+	AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, clusterName string, sync {{.schema.CodeName}}HandlerFunc)
 	AddClusterScopedLifecycle(ctx context.Context, name, clusterName string, lifecycle {{.schema.CodeName}}Lifecycle)
+	AddClusterScopedFeatureLifecycle(ctx context.Context, enabled func() bool, name, clusterName string, lifecycle {{.schema.CodeName}}Lifecycle)
 }
 
 type {{.schema.ID}}Lister struct {
@@ -156,10 +162,39 @@ func (c *{{.schema.ID}}Controller) AddHandler(ctx context.Context, name string, 
 	})
 }
 
+func (c *{{.schema.ID}}Controller) AddFeatureHandler(ctx context.Context, enabled func() bool, name string, handler {{.schema.CodeName}}HandlerFunc) {
+	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
+		if !enabled() {
+			return nil, nil
+		} else if obj == nil {
+			return handler(key, nil)
+		} else if v, ok := obj.(*{{.prefix}}{{.schema.CodeName}}); ok {
+			return handler(key, v)
+		} else {
+			return nil, nil
+		}
+	})
+}
+
 func (c *{{.schema.ID}}Controller) AddClusterScopedHandler(ctx context.Context, name, cluster string, handler {{.schema.CodeName}}HandlerFunc) {
 	resource.PutClusterScoped({{.schema.CodeName}}GroupVersionResource)
 	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
 		if obj == nil {
+			return handler(key, nil)
+		} else if v, ok := obj.(*{{.prefix}}{{.schema.CodeName}}); ok && controller.ObjectInCluster(cluster, obj) {
+			return handler(key, v)
+		} else {
+			return nil, nil
+		}
+	})
+}
+
+func (c *{{.schema.ID}}Controller) AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, cluster string, handler {{.schema.CodeName}}HandlerFunc) {
+	resource.PutClusterScoped({{.schema.CodeName}}GroupVersionResource)
+	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
+		if !enabled() {
+			return nil, nil
+		} else if obj == nil {
 			return handler(key, nil)
 		} else if v, ok := obj.(*{{.prefix}}{{.schema.CodeName}}); ok && controller.ObjectInCluster(cluster, obj) {
 			return handler(key, v)
@@ -264,18 +299,36 @@ func (s *{{.schema.ID}}Client) AddHandler(ctx context.Context, name string, sync
 	s.Controller().AddHandler(ctx, name, sync)
 }
 
+func (s *{{.schema.ID}}Client) AddFeatureHandler(ctx context.Context, enabled func() bool, name string, sync {{.schema.CodeName}}HandlerFunc) {
+	s.Controller().AddFeatureHandler(ctx, enabled, name, sync)
+}
+
 func (s *{{.schema.ID}}Client) AddLifecycle(ctx context.Context, name string, lifecycle {{.schema.CodeName}}Lifecycle) {
 	sync := New{{.schema.CodeName}}LifecycleAdapter(name, false, s, lifecycle)
 	s.Controller().AddHandler(ctx, name, sync)
+}
+
+func (s *{{.schema.ID}}Client) AddFeatureLifecycle(ctx context.Context, enabled func() bool, name string, lifecycle {{.schema.CodeName}}Lifecycle) {
+	sync := New{{.schema.CodeName}}LifecycleAdapter(name, false, s, lifecycle)
+	s.Controller().AddFeatureHandler(ctx, enabled, name, sync)
 }
 
 func (s *{{.schema.ID}}Client) AddClusterScopedHandler(ctx context.Context, name, clusterName string, sync {{.schema.CodeName}}HandlerFunc) {
 	s.Controller().AddClusterScopedHandler(ctx, name, clusterName, sync)
 }
 
+func (s *{{.schema.ID}}Client) AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, clusterName string, sync {{.schema.CodeName}}HandlerFunc) {
+	s.Controller().AddClusterScopedFeatureHandler(ctx, enabled, name, clusterName, sync)
+}
+
 func (s *{{.schema.ID}}Client) AddClusterScopedLifecycle(ctx context.Context, name, clusterName string, lifecycle {{.schema.CodeName}}Lifecycle) {
 	sync := New{{.schema.CodeName}}LifecycleAdapter(name+"_"+clusterName, true, s, lifecycle)
 	s.Controller().AddClusterScopedHandler(ctx, name, clusterName, sync)
+}
+
+func (s *{{.schema.ID}}Client) AddClusterScopedFeatureLifecycle(ctx context.Context, enabled func() bool, name, clusterName string, lifecycle {{.schema.CodeName}}Lifecycle) {
+	sync := New{{.schema.CodeName}}LifecycleAdapter(name+"_"+clusterName, true, s, lifecycle)
+	s.Controller().AddClusterScopedFeatureHandler(ctx, enabled, name, clusterName, sync)
 }
 
 type {{.schema.CodeName}}Indexer func(obj *{{.prefix}}{{.schema.CodeName}}) ([]string, error)
