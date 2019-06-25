@@ -25,6 +25,7 @@ func getEmbedded(ctx context.Context) (bool, context.Context, *rest.Config, erro
 		}
 		sc = obj.(*server.ServerConfig)
 		sc.NoScheduler = false
+		sc.LeaderElect = false
 	}
 
 	if len(sc.ETCDEndpoints) == 0 {
