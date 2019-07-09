@@ -18,6 +18,7 @@ func funcs() template.FuncMap {
 		"hasGet":              hasGet,
 		"hasPost":             hasPost,
 		"getCollectionOutput": getCollectionOutput,
+		"toSnake":             convert.ToSnake,
 	}
 }
 

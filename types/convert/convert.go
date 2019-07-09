@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/iancoleman/strcase"
 )
 
 func Chan(c <-chan map[string]interface{}, f func(map[string]interface{}) map[string]interface{}) chan map[string]interface{} {
@@ -127,6 +129,10 @@ func ToFloat(value interface{}) (float64, error) {
 		return float64(f), err
 	}
 	return strconv.ParseFloat(ToString(value), 64)
+}
+
+func ToSnake(s string) string {
+	return strcase.ToSnake(s)
 }
 
 func Capitalize(s string) string {
