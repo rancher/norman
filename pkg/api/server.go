@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"sync"
 
-	access2 "github.com/rancher/norman/pkg/api/access"
-	builtin2 "github.com/rancher/norman/pkg/api/builtin"
-	handler2 "github.com/rancher/norman/pkg/api/handler"
-	writer2 "github.com/rancher/norman/pkg/api/writer"
+	"github.com/rancher/norman/pkg/api/access"
+	"github.com/rancher/norman/pkg/api/builtin"
+	"github.com/rancher/norman/pkg/api/handler"
+	"github.com/rancher/norman/pkg/api/writer"
 	"github.com/rancher/norman/pkg/authorization"
 	"github.com/rancher/norman/pkg/httperror"
-	handler3 "github.com/rancher/norman/pkg/httperror/handler"
+	errhandler "github.com/rancher/norman/pkg/httperror/handler"
 	"github.com/rancher/norman/pkg/parse"
 
 	"github.com/rancher/norman/pkg/store/wrapper"
@@ -63,31 +63,31 @@ func NewAPIServer() *Server {
 		DefaultNamespace: "default",
 		Schemas:          types.NewSchemas(),
 		ResponseWriters: map[string]ResponseWriter{
-			"json": &writer2.EncodingResponseWriter{
+			"json": &writer.EncodingResponseWriter{
 				ContentType: "application/json",
 				Encoder:     types.JSONEncoder,
 			},
-			"html": &writer2.HTMLResponseWriter{
-				EncodingResponseWriter: writer2.EncodingResponseWriter{
+			"html": &writer.HTMLResponseWriter{
+				EncodingResponseWriter: writer.EncodingResponseWriter{
 					Encoder:     types.JSONEncoder,
 					ContentType: "application/json",
 				},
 			},
-			"yaml": &writer2.EncodingResponseWriter{
+			"yaml": &writer.EncodingResponseWriter{
 				ContentType: "application/yaml",
 				Encoder:     types.YAMLEncoder,
 			},
 		},
 		AccessControl: &authorization.AllAccess{},
 		Defaults: Defaults{
-			CreateHandler: handler2.CreateHandler,
-			DeleteHandler: handler2.DeleteHandler,
-			UpdateHandler: handler2.UpdateHandler,
-			ListHandler:   handler2.ListHandler,
-			ErrorHandler:  handler3.ErrorHandler,
+			CreateHandler: handler.CreateHandler,
+			DeleteHandler: handler.DeleteHandler,
+			UpdateHandler: handler.UpdateHandler,
+			ListHandler:   handler.ListHandler,
+			ErrorHandler:  errhandler.ErrorHandler,
 		},
 		StoreWrapper: wrapper.Wrap,
-		QueryFilter:  handler2.QueryFilter,
+		QueryFilter:  handler.QueryFilter,
 		Parser:       parse.Parse,
 		URLParser:    parse.MuxURLParser,
 	}
@@ -119,7 +119,7 @@ func (s *Server) AddSchemas(schemas *types.Schemas) error {
 		if s.IgnoreBuiltin {
 			return
 		}
-		for _, schema := range builtin2.Schemas.Schemas() {
+		for _, schema := range builtin.Schemas.Schemas() {
 			s.addSchema(*schema)
 		}
 	})
@@ -200,9 +200,8 @@ func determineVerb(apiOp *types.APIOperation) Verb {
 	case http.MethodGet:
 		if apiOp.Name == "" {
 			return List
-		} else {
-			return Get
 		}
+		return Get
 	case http.MethodPost:
 		return Create
 	case http.MethodPut:
@@ -250,9 +249,8 @@ func (s *Server) handleOp(apiOp *types.APIOperation) (int, interface{}, error) {
 		data, err := handle(apiOp, apiOp.Schema.DeleteHandler, s.Defaults.DeleteHandler)
 		if data == nil {
 			return http.StatusNoContent, data, err
-		} else {
-			return http.StatusOK, data, err
 		}
+		return http.StatusOK, data, err
 	}
 
 	return http.StatusNotFound, nil, httperror.NewAPIError(httperror.NotFound, "")
@@ -269,7 +267,7 @@ func handle(apiOp *types.APIOperation, custom types.RequestHandler, handler type
 
 func handleAction(action *types.Action, context *types.APIOperation) error {
 	if context.Name != "" {
-		if err := access2.ByID(context, context.Type, context.Name, nil); err != nil {
+		if err := access.ByID(context, context.Type, context.Name, nil); err != nil {
 			return err
 		}
 	}
@@ -284,12 +282,12 @@ func (s *Server) handleError(apiOp *types.APIOperation, err error) {
 	}
 }
 
-func (s *Server) CustomAPIUIResponseWriter(cssURL, jsURL, version writer2.StringGetter) {
+func (s *Server) CustomAPIUIResponseWriter(cssURL, jsURL, version writer.StringGetter) {
 	wi, ok := s.ResponseWriters["html"]
 	if !ok {
 		return
 	}
-	w, ok := wi.(*writer2.HTMLResponseWriter)
+	w, ok := wi.(*writer.HTMLResponseWriter)
 	if !ok {
 		return
 	}

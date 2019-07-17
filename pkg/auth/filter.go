@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/authentication/v1"
-
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/plugin/pkg/authenticator/token/webhook"
@@ -65,9 +64,8 @@ func (w *webhookAuth) Authenticate(req *http.Request) (user.Info, bool, error) {
 	resp, ok, err := w.auth.AuthenticateToken(req.Context(), token)
 	if resp == nil {
 		return nil, ok, err
-	} else {
-		return resp.User, ok, err
 	}
+	return resp.User, ok, err
 }
 
 func GetUser(ctx context.Context) *user.Info {

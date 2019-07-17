@@ -4,33 +4,32 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rancher/norman/pkg/types"
-
 	"github.com/rancher/norman/pkg/httperror"
+	"github.com/rancher/norman/pkg/types"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
 
-type ProxyClient struct {
+type ClientFactory struct {
 	cfg       rest.Config
 	transport http.RoundTripper
 	idToGVR   map[string]schema.GroupVersionResource
 }
 
-func NewProxyClient(cfg *rest.Config) *ProxyClient {
-	return &ProxyClient{
+func NewClientFactory(cfg *rest.Config) *ClientFactory {
+	return &ClientFactory{
 		cfg:       *cfg,
 		transport: http.DefaultTransport,
 	}
 }
 
-func (p *ProxyClient) Register(schema *types.Schema, gvr schema.GroupVersionResource) {
+func (p *ClientFactory) Register(schema *types.Schema, gvr schema.GroupVersionResource) {
 	p.idToGVR[schema.ID] = gvr
 }
 
-func (p *ProxyClient) Client(ctx *types.APIOperation, schema *types.Schema) (dynamic.ResourceInterface, error) {
+func (p *ClientFactory) Client(ctx *types.APIOperation, schema *types.Schema) (dynamic.ResourceInterface, error) {
 	gvr, ok := p.idToGVR[schema.ID]
 	if !ok {
 		return nil, httperror.NewAPIError(httperror.NotFound, "Failed to find client for "+schema.ID)

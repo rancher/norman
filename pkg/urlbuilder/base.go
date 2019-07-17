@@ -8,15 +8,6 @@ import (
 	"strings"
 )
 
-// Constructs the request URL based off of standard headers in the request, falling back to the HttpServletRequest.getRequestURL()
-// if the headers aren't available. Here is the ordered list of how we'll attempt to construct the URL:
-//  - x-forwarded-proto://x-forwarded-host:x-forwarded-port/HttpServletRequest.getRequestURI()
-//  - x-forwarded-proto://x-forwarded-host/HttpServletRequest.getRequestURI()
-//  - x-forwarded-proto://host:x-forwarded-port/HttpServletRequest.getRequestURI()
-//  - x-forwarded-proto://host/HttpServletRequest.getRequestURI() request.getRequestURL()
-//
-// Additional notes:
-//  - If the x-forwarded-host/host header has a port and x-forwarded-port has been passed, x-forwarded-port will be used.
 func ParseRequestURL(r *http.Request) string {
 	// Get url from standard headers
 	requestURL := getURLFromStandardHeaders(r)
