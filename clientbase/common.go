@@ -92,6 +92,15 @@ func IsNotFound(err error) bool {
 	return apiError.StatusCode == http.StatusNotFound
 }
 
+func IsForbidden(err error) bool {
+	apiError, ok := err.(*APIError)
+	if !ok {
+		return false
+	}
+
+	return apiError.StatusCode == http.StatusForbidden
+}
+
 func NewAPIError(resp *http.Response, url string) *APIError {
 	contents, err := ioutil.ReadAll(resp.Body)
 	var body string
