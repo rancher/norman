@@ -1,4 +1,4 @@
-// +build no_etcd
+// +build !linux
 
 package etcd
 

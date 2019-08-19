@@ -1,5 +1,3 @@
-// +build !no_etcd
-
 package etcd
 
 import (
@@ -8,12 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/coreos/etcd/etcdmain"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -63,8 +61,13 @@ func checkEtcd(endpoint string) error {
 }
 
 func runEtcd(ctx context.Context, args []string) {
-	os.Args = args
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGKILL,
+	}
+
+
 	logrus.Info("Running ", strings.Join(args, " "))
-	etcdmain.Main()
-	logrus.Errorf("etcd exited")
+	cmd.Run()
+	logrus.Fatal("etcd exited")
 }
