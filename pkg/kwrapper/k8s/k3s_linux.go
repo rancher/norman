@@ -46,8 +46,8 @@ func k3sServer(ctx context.Context, endpoints []string) (string, error) {
 	cmd := exec.Command("k3s", "server",
 		"--no-deploy=traefik",
 		"--no-deploy=coredns",
+		"--no-deploy=servicelb",
 		"--disable-agent",
-		"--disable-scheduler",
 		fmt.Sprintf("--storage-endpoint=%s", strings.Join(endpoints, ",")),
 		"--storage-backend=etcd3")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
