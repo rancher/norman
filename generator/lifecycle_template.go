@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/lifecycle"
+	"github.com/rancher/norman/resource"
 )
 
 type {{.schema.CodeName}}Lifecycle interface {
@@ -54,6 +55,9 @@ func (w *{{.schema.ID}}LifecycleAdapter) Updated(obj runtime.Object) (runtime.Ob
 }
 
 func New{{.schema.CodeName}}LifecycleAdapter(name string, clusterScoped bool, client {{.schema.CodeName}}Interface, l {{.schema.CodeName}}Lifecycle) {{.schema.CodeName}}HandlerFunc {
+	if clusterScoped {
+		resource.PutClusterScoped({{.schema.CodeName}}GroupVersionResource)
+	}
 	adapter := &{{.schema.ID}}LifecycleAdapter{lifecycle: l}
 	syncFn := lifecycle.NewObjectLifecycleAdapter(name, clusterScoped, adapter, client.ObjectClient())
 	return func(key string, obj *{{.prefix}}{{.schema.CodeName}}) (runtime.Object, error) {
