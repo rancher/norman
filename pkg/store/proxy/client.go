@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/rancher/norman/pkg/httperror"
 	"github.com/rancher/norman/pkg/types"
@@ -13,23 +12,29 @@ import (
 )
 
 type ClientFactory struct {
-	cfg       rest.Config
-	transport http.RoundTripper
-	idToGVR   map[string]schema.GroupVersionResource
+	cfg     rest.Config
+	idToGVR map[string]schema.GroupVersionResource
 }
 
 func NewClientFactory(cfg *rest.Config) *ClientFactory {
 	return &ClientFactory{
-		cfg:       *cfg,
-		transport: http.DefaultTransport,
+		cfg:     *cfg,
+		idToGVR: map[string]schema.GroupVersionResource{},
 	}
 }
 
 func (p *ClientFactory) Register(schema *types.Schema, gvr schema.GroupVersionResource) {
 	p.idToGVR[schema.ID] = gvr
+
+	schema.Store = NewProxyStore(p)
+	schema.Mapper = AddAPIVersionKind{
+		APIVersion: fmt.Sprintf("%s/%s", gvr.Group, gvr.Version),
+		Kind:       schema.CodeName,
+		Next:       schema.Mapper,
+	}
 }
 
-func (p *ClientFactory) Client(ctx *types.APIOperation, schema *types.Schema) (dynamic.ResourceInterface, error) {
+func (p *ClientFactory) Client(ctx *types.APIRequest, schema *types.Schema) (dynamic.ResourceInterface, error) {
 	gvr, ok := p.idToGVR[schema.ID]
 	if !ok {
 		return nil, httperror.NewAPIError(httperror.NotFound, "Failed to find client for "+schema.ID)
@@ -40,7 +45,6 @@ func (p *ClientFactory) Client(ctx *types.APIOperation, schema *types.Schema) (d
 		return nil, fmt.Errorf("failed to find user context for client")
 	}
 	newCfg := p.cfg
-	newCfg.Transport = p.transport
 	newCfg.Impersonate.UserName = user.GetName()
 	newCfg.Impersonate.Groups = user.GetGroups()
 	newCfg.Impersonate.Extra = user.GetExtra()

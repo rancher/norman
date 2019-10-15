@@ -28,38 +28,44 @@ type ParsedURL struct {
 	Link       string
 	Method     string
 	Action     string
+	Prefix     string
 	SubContext map[string]string
 	Query      url.Values
 }
 
 type URLParser func(rw http.ResponseWriter, req *http.Request, schemas *types.Schemas) (ParsedURL, error)
 
-type Parser func(apiOp *types.APIOperation, rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, urlParser URLParser) error
+type Parser func(apiOp *types.APIRequest, urlParser URLParser) error
 
 type apiOpKey struct{}
 
-func GetAPIContext(ctx context.Context) *types.APIOperation {
-	apiOp, _ := ctx.Value(apiOpKey{}).(*types.APIOperation)
+func GetAPIContext(ctx context.Context) *types.APIRequest {
+	apiOp, _ := ctx.Value(apiOpKey{}).(*types.APIRequest)
 	return apiOp
 }
 
-func Parse(apiOp *types.APIOperation, rw http.ResponseWriter, req *http.Request, schemas *types.Schemas, urlParser URLParser) error {
+func Parse(apiOp *types.APIRequest, urlParser URLParser) error {
 	var err error
 
-	apiOp.Response = rw
-	apiOp.Schemas = schemas
-	ctx := context.WithValue(req.Context(), apiOpKey{}, apiOp)
-	apiOp.Request = req.WithContext(ctx)
+	if apiOp.Request == nil {
+		apiOp.Request, err = http.NewRequest("GET", "/", nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	ctx := context.WithValue(apiOp.Request.Context(), apiOpKey{}, apiOp)
+	apiOp.Request = apiOp.Request.WithContext(ctx)
 
 	if apiOp.Method == "" {
-		apiOp.Method = parseMethod(req)
+		apiOp.Method = parseMethod(apiOp.Request)
 	}
 	if apiOp.ResponseFormat == "" {
-		apiOp.ResponseFormat = parseResponseFormat(req)
+		apiOp.ResponseFormat = parseResponseFormat(apiOp.Request)
 	}
 
 	// The response format is guaranteed to be set even in the event of an error
-	parsedURL, err := urlParser(rw, req, schemas)
+	parsedURL, err := urlParser(apiOp.Response, apiOp.Request, apiOp.Schemas)
 	// wait to check error, want to set as much as possible
 
 	if apiOp.Type == "" {
@@ -80,11 +86,16 @@ func Parse(apiOp *types.APIOperation, rw http.ResponseWriter, req *http.Request,
 	if apiOp.Method == "" && parsedURL.Method != "" {
 		apiOp.Method = parsedURL.Method
 	}
+	if apiOp.URLPrefix == "" {
+		apiOp.URLPrefix = parsedURL.Prefix
+	}
 
 	if apiOp.URLBuilder == nil {
-		apiOp.URLBuilder, err = urlbuilder.New(req, &urlbuilder.DefaultPathResolver{
-			Schemas: schemas,
-		}, schemas)
+		// make error local to not override the outer error we have yet to check
+		var err error
+		apiOp.URLBuilder, err = urlbuilder.New(apiOp.Request, &urlbuilder.DefaultPathResolver{
+			Prefix: apiOp.URLPrefix,
+		}, apiOp.Schemas)
 		if err != nil {
 			return err
 		}
@@ -94,11 +105,11 @@ func Parse(apiOp *types.APIOperation, rw http.ResponseWriter, req *http.Request,
 		return err
 	}
 
-	if apiOp.Schema == nil {
-		apiOp.Schema = schemas.Schema(apiOp.Type)
+	if apiOp.Schema == nil && apiOp.Schemas != nil {
+		apiOp.Schema = apiOp.Schemas.Schema(apiOp.Type)
 	}
 
-	if apiOp.Schema != nil {
+	if apiOp.Schema != nil && apiOp.Type == "" {
 		apiOp.Type = apiOp.Schema.ID
 	}
 
@@ -144,7 +155,7 @@ func parseMethod(req *http.Request) string {
 	return method
 }
 
-func Body(req *http.Request) (map[string]interface{}, error) {
+func Body(req *http.Request) (types.APIObject, error) {
 	req.ParseMultipartForm(maxFormSize)
 	if req.MultipartForm != nil {
 		return valuesToBody(req.MultipartForm.Value), nil
@@ -157,10 +168,10 @@ func Body(req *http.Request) (map[string]interface{}, error) {
 	return ReadBody(req)
 }
 
-func valuesToBody(input map[string][]string) map[string]interface{} {
+func valuesToBody(input map[string][]string) types.APIObject {
 	result := map[string]interface{}{}
 	for k, v := range input {
 		result[k] = v
 	}
-	return result
+	return types.ToAPI(result)
 }

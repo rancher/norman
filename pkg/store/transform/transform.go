@@ -9,11 +9,11 @@ import (
 	"github.com/rancher/norman/pkg/httperror"
 )
 
-type TransformerFunc func(apiOp *types.APIOperation, schema *types.Schema, data map[string]interface{}, opt *types.QueryOptions) (map[string]interface{}, error)
+type TransformerFunc func(apiOp *types.APIRequest, schema *types.Schema, data map[string]interface{}, opt *types.QueryOptions) (map[string]interface{}, error)
 
-type ListTransformerFunc func(apiOp *types.APIOperation, schema *types.Schema, data []map[string]interface{}, opt *types.QueryOptions) ([]map[string]interface{}, error)
+type ListTransformerFunc func(apiOp *types.APIRequest, schema *types.Schema, data []map[string]interface{}, opt *types.QueryOptions) ([]map[string]interface{}, error)
 
-type StreamTransformerFunc func(apiOp *types.APIOperation, schema *types.Schema, data chan map[string]interface{}, opt *types.QueryOptions) (chan map[string]interface{}, error)
+type StreamTransformerFunc func(apiOp *types.APIRequest, schema *types.Schema, data chan map[string]interface{}, opt *types.QueryOptions) (chan map[string]interface{}, error)
 
 type Store struct {
 	Store             types.Store
@@ -22,7 +22,7 @@ type Store struct {
 	StreamTransformer StreamTransformerFunc
 }
 
-func (s *Store) ByID(apiOp *types.APIOperation, schema *types.Schema, id string) (map[string]interface{}, error) {
+func (s *Store) ByID(apiOp *types.APIRequest, schema *types.Schema, id string) (map[string]interface{}, error) {
 	data, err := s.Store.ByID(apiOp, schema, id)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (s *Store) ByID(apiOp *types.APIOperation, schema *types.Schema, id string)
 	return obj, err
 }
 
-func (s *Store) Watch(apiOp *types.APIOperation, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
+func (s *Store) Watch(apiOp *types.APIRequest, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
 	c, err := s.Store.Watch(apiOp, schema, opt)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (s *Store) Watch(apiOp *types.APIOperation, schema *types.Schema, opt *type
 	}), nil
 }
 
-func (s *Store) List(apiOp *types.APIOperation, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
+func (s *Store) List(apiOp *types.APIRequest, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
 	data, err := s.Store.List(apiOp, schema, opt)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (s *Store) List(apiOp *types.APIOperation, schema *types.Schema, opt *types
 	return result, nil
 }
 
-func (s *Store) Create(apiOp *types.APIOperation, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
+func (s *Store) Create(apiOp *types.APIRequest, schema *types.Schema, data map[string]interface{}) (map[string]interface{}, error) {
 	data, err := s.Store.Create(apiOp, schema, data)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (s *Store) Create(apiOp *types.APIOperation, schema *types.Schema, data map
 	return s.Transformer(apiOp, schema, data, nil)
 }
 
-func (s *Store) Update(apiOp *types.APIOperation, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
+func (s *Store) Update(apiOp *types.APIRequest, schema *types.Schema, data map[string]interface{}, id string) (map[string]interface{}, error) {
 	data, err := s.Store.Update(apiOp, schema, data, id)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *Store) Update(apiOp *types.APIOperation, schema *types.Schema, data map
 	return s.Transformer(apiOp, schema, data, nil)
 }
 
-func (s *Store) Delete(apiOp *types.APIOperation, schema *types.Schema, id string) (map[string]interface{}, error) {
+func (s *Store) Delete(apiOp *types.APIRequest, schema *types.Schema, id string) (map[string]interface{}, error) {
 	obj, err := s.Store.Delete(apiOp, schema, id)
 	if err != nil || obj == nil {
 		return obj, err

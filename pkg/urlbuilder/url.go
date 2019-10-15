@@ -11,11 +11,18 @@ import (
 )
 
 const (
-	PrefixHeader         = "X-API-URL-Prefix"
-	ForwardedHostHeader  = "X-Forwarded-Host"
-	ForwardedProtoHeader = "X-Forwarded-Proto"
-	ForwardedPortHeader  = "X-Forwarded-Port"
+	PrefixHeader           = "X-API-URL-Prefix"
+	ForwardedAPIHostHeader = "X-API-Host"
+	ForwardedHostHeader    = "X-Forwarded-Host"
+	ForwardedProtoHeader   = "X-Forwarded-Proto"
+	ForwardedPortHeader    = "X-Forwarded-Port"
 )
+
+func NewPrefixed(r *http.Request, schemas *types.Schemas, prefix string) (types.URLBuilder, error) {
+	return New(r, &DefaultPathResolver{
+		Prefix: prefix,
+	}, schemas)
+}
 
 func New(r *http.Request, resolver PathResolver, schemas *types.Schemas) (types.URLBuilder, error) {
 	requestURL := ParseRequestURL(r)
@@ -40,14 +47,11 @@ type PathResolver interface {
 }
 
 type DefaultPathResolver struct {
-	Schemas *types.Schemas
+	Prefix string
 }
 
 func (d *DefaultPathResolver) Schema(base string, schema *types.Schema) string {
-	if schema.ID == "schema" {
-		return constructBasicURL(base, "schemas")
-	}
-	return constructBasicURL(base, schema.PluralName)
+	return ConstructBasicURL(base, d.Prefix, schema.PluralName)
 }
 
 type DefaultURLBuilder struct {
@@ -96,6 +100,9 @@ func (u *DefaultURLBuilder) Current() string {
 }
 
 func (u *DefaultURLBuilder) RelativeToRoot(path string) string {
+	if len(path) > 0 && path[0] != '/' {
+		return u.responseURLBase + "/" + path
+	}
 	return u.responseURLBase + path
 }
 
@@ -123,10 +130,10 @@ func (u *DefaultURLBuilder) schemaURL(schema *types.Schema, parts ...string) str
 	base := []string{
 		u.pathResolver.Schema(u.responseURLBase, schema),
 	}
-	return constructBasicURL(append(base, parts...)...)
+	return ConstructBasicURL(append(base, parts...)...)
 }
 
-func constructBasicURL(parts ...string) string {
+func ConstructBasicURL(parts ...string) string {
 	switch len(parts) {
 	case 0:
 		return ""

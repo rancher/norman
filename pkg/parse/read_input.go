@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/rancher/norman/pkg/types"
+
 	"github.com/rancher/norman/pkg/httperror"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -19,20 +21,20 @@ var bodyMethods = map[string]bool{
 
 type Decode func(interface{}) error
 
-func ReadBody(req *http.Request) (map[string]interface{}, error) {
+func ReadBody(req *http.Request) (types.APIObject, error) {
 	if !bodyMethods[req.Method] {
-		return nil, nil
+		return types.APIObject{}, nil
 	}
 
 	decode := getDecoder(req, io.LimitReader(req.Body, maxFormSize))
 
 	data := map[string]interface{}{}
 	if err := decode(&data); err != nil {
-		return nil, httperror.NewAPIError(httperror.InvalidBodyContent,
+		return types.APIObject{}, httperror.NewAPIError(httperror.InvalidBodyContent,
 			fmt.Sprintf("Failed to parse body: %v", err))
 	}
 
-	return data, nil
+	return types.ToAPI(data), nil
 }
 
 func getDecoder(req *http.Request, reader io.Reader) Decode {

@@ -1,7 +1,7 @@
 package types
 
 import (
-	convert2 "github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/pkg/types/convert"
 )
 
 var (
@@ -52,17 +52,17 @@ func (q *QueryCondition) Valid(schema *Schema, data map[string]interface{}) bool
 		}
 		return q.left.Valid(schema, data) || q.right.Valid(schema, data)
 	case CondEQ:
-		return q.Value == convert2.ToString(valueOrDefault(schema, data, q))
+		return q.Value == convert.ToString(valueOrDefault(schema, data, q))
 	case CondNE:
-		return q.Value != convert2.ToString(valueOrDefault(schema, data, q))
+		return q.Value != convert.ToString(valueOrDefault(schema, data, q))
 	case CondIn:
-		return q.Values[convert2.ToString(valueOrDefault(schema, data, q))]
+		return q.Values[convert.ToString(valueOrDefault(schema, data, q))]
 	case CondNotIn:
-		return !q.Values[convert2.ToString(valueOrDefault(schema, data, q))]
+		return !q.Values[convert.ToString(valueOrDefault(schema, data, q))]
 	case CondNotNull:
-		return convert2.ToString(valueOrDefault(schema, data, q)) != ""
+		return convert.ToString(valueOrDefault(schema, data, q)) != ""
 	case CondNull:
-		return convert2.ToString(valueOrDefault(schema, data, q)) == ""
+		return convert.ToString(valueOrDefault(schema, data, q)) == ""
 	}
 
 	return false

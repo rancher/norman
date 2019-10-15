@@ -3,67 +3,63 @@ package urlbuilder
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 )
 
 func ParseRequestURL(r *http.Request) string {
-	// Get url from standard headers
-	requestURL := getURLFromStandardHeaders(r)
-	if requestURL != "" {
-		return requestURL
-	}
-
-	// Use incoming url
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-	return fmt.Sprintf("%s://%s%s%s", scheme, r.Host, r.Header.Get(PrefixHeader), r.URL.Path)
+	scheme := GetScheme(r)
+	host := GetHost(r, scheme)
+	return fmt.Sprintf("%s://%s%s%s", scheme, host, r.Header.Get(PrefixHeader), r.URL.Path)
 }
 
-func getURLFromStandardHeaders(r *http.Request) string {
-	xForwardedProto := getOverrideHeader(r, ForwardedProtoHeader, "")
-	if xForwardedProto == "" {
-		return ""
+func GetHost(r *http.Request, scheme string) string {
+	host := r.Header.Get(ForwardedAPIHostHeader)
+	if host == "" {
+		host = strings.Split(r.Header.Get(ForwardedHostHeader), ",")[0]
 	}
-
-	host := getOverrideHeader(r, ForwardedHostHeader, "")
 	if host == "" {
 		host = r.Host
 	}
 
-	if host == "" {
-		return ""
+	port := r.Header.Get(ForwardedPortHeader)
+	if port == "" {
+		return host
 	}
 
-	port := getOverrideHeader(r, ForwardedPortHeader, "")
-	if port == "443" || port == "80" {
-		port = "" // Don't include default ports in url
+	if port == "80" && scheme == "http" {
+		return host
 	}
 
-	if port != "" && strings.Contains(host, ":") {
-		// Have to strip the port that is in the host. Handle IPv6, which has this format: [::1]:8080
-		if (strings.HasPrefix(host, "[") && strings.Contains(host, "]:")) || !strings.HasPrefix(host, "[") {
-			host = host[0:strings.LastIndex(host, ":")]
-		}
+	if port == "443" && scheme == "http" {
+		return host
 	}
 
-	if port != "" {
-		port = ":" + port
+	hostname, _, err := net.SplitHostPort(host)
+	if err != nil {
+		return host
 	}
 
-	return fmt.Sprintf("%s://%s%s%s%s", xForwardedProto, host, port, r.Header.Get(PrefixHeader), r.URL.Path)
+	return strings.Join([]string{hostname, port}, ":")
 }
 
-func getOverrideHeader(r *http.Request, header string, defaultValue string) string {
-	// Need to handle comma separated hosts in X-Forwarded-For
-	value := r.Header.Get(header)
-	if value != "" {
-		return strings.TrimSpace(strings.Split(value, ",")[0])
+func GetScheme(r *http.Request) string {
+	scheme := r.Header.Get(ForwardedProtoHeader)
+	if scheme != "" {
+		switch scheme {
+		case "ws":
+			return "http"
+		case "wss":
+			return "https"
+		default:
+			return scheme
+		}
+	} else if r.TLS != nil {
+		return "https"
 	}
-	return defaultValue
+	return "http"
 }
 
 func ParseResponseURLBase(currentURL string, r *http.Request) (string, error) {

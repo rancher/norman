@@ -3,6 +3,7 @@ package mapper
 import (
 	"fmt"
 
+	"github.com/rancher/norman/pkg/data"
 	"github.com/rancher/norman/pkg/types"
 	definition2 "github.com/rancher/norman/pkg/types/definition"
 )
@@ -12,16 +13,14 @@ type SliceToMap struct {
 	Key   string
 }
 
-func (s SliceToMap) FromInternal(data map[string]interface{}) {
-	datas, _ := data[s.Field].([]interface{})
+func (s SliceToMap) FromInternal(data data.Object) {
+	datas := data.Slice(s.Field)
 	result := map[string]interface{}{}
 
 	for _, item := range datas {
-		if mapItem, ok := item.(map[string]interface{}); ok {
-			name, _ := mapItem[s.Key].(string)
-			delete(mapItem, s.Key)
-			result[name] = mapItem
-		}
+		name, _ := item[s.Key].(string)
+		delete(item, s.Key)
+		result[name] = item
 	}
 
 	if len(result) > 0 {
@@ -29,8 +28,8 @@ func (s SliceToMap) FromInternal(data map[string]interface{}) {
 	}
 }
 
-func (s SliceToMap) ToInternal(data map[string]interface{}) error {
-	datas, _ := data[s.Field].(map[string]interface{})
+func (s SliceToMap) ToInternal(data data.Object) error {
+	datas := data.Map(s.Field)
 	var result []interface{}
 
 	for name, item := range datas {

@@ -1,26 +1,77 @@
 package auth
 
 import (
-	"context"
+	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
-	v1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
+	"k8s.io/apiserver/pkg/authentication/token/cache"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/plugin/pkg/authenticator/token/webhook"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-type userContextKey struct{}
 
 type Authenticator interface {
 	Authenticate(req *http.Request) (user.Info, bool, error)
 }
 
-func NewWebhookAuthenticator(kubeConfigFile string) (Authenticator, error) {
+type Middleware func(http.ResponseWriter, *http.Request, http.Handler)
+
+func (m Middleware) Wrap(handler http.Handler) http.Handler {
+	if m == nil {
+		return handler
+	}
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		m(rw, req, handler)
+	})
+}
+
+func WebhookConfigForURL(url string) (string, error) {
+	config := clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"local": {
+				Server:                url,
+				InsecureSkipTLSVerify: true,
+			},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"Default": {
+				Cluster:   "local",
+				AuthInfo:  "user",
+				Namespace: "default",
+			},
+		},
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"user": {},
+		},
+		CurrentContext: "Default",
+	}
+
+	tmpFile, err := ioutil.TempFile("", "webhook-config")
+	if err != nil {
+		return "", err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), clientcmd.WriteToFile(config, tmpFile.Name())
+}
+
+func NewWebhookAuthenticator(cacheTTL time.Duration, kubeConfigFile string) (Authenticator, error) {
 	wh, err := webhook.New(kubeConfigFile, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if cacheTTL > 0 {
+		return &webhookAuth{
+			auth: cache.New(wh, false, cacheTTL, cacheTTL),
+		}, nil
 	}
 
 	return &webhookAuth{
@@ -28,12 +79,12 @@ func NewWebhookAuthenticator(kubeConfigFile string) (Authenticator, error) {
 	}, nil
 }
 
-func NewWebhookAuthHandler(kubeConfigFile string, next http.Handler) (http.Handler, error) {
-	auth, err := NewWebhookAuthenticator(kubeConfigFile)
+func NewWebhookMiddleware(cacheTTL time.Duration, kubeConfigFile string) (Middleware, error) {
+	auth, err := NewWebhookAuthenticator(cacheTTL, kubeConfigFile)
 	if err != nil {
 		return nil, err
 	}
-	return WrapHandler(auth, next), nil
+	return ToMiddleware(auth), nil
 }
 
 type webhookAuth struct {
@@ -68,13 +119,8 @@ func (w *webhookAuth) Authenticate(req *http.Request) (user.Info, bool, error) {
 	return resp.User, ok, err
 }
 
-func GetUser(ctx context.Context) *user.Info {
-	ui, _ := ctx.Value(userContextKey{}).(*user.Info)
-	return ui
-}
-
-func WrapHandler(auth Authenticator, handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+func ToMiddleware(auth Authenticator) func(rw http.ResponseWriter, req *http.Request, next http.Handler) {
+	return func(rw http.ResponseWriter, req *http.Request, next http.Handler) {
 		info, ok, err := auth.Authenticate(req)
 		if err != nil {
 			rw.WriteHeader(http.StatusServiceUnavailable)
@@ -87,14 +133,8 @@ func WrapHandler(auth Authenticator, handler http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(req.Context(), userContextKey{}, &info)
+		ctx := request.WithUser(req.Context(), info)
 		req = req.WithContext(ctx)
-
-		req.Header.Set(v1.ImpersonateUserHeader, info.GetName())
-		for _, group := range info.GetGroups() {
-			req.Header.Set(v1.ImpersonateGroupHeader, group)
-		}
-
-		handler.ServeHTTP(rw, req)
-	})
+		next.ServeHTTP(rw, req)
+	}
 }

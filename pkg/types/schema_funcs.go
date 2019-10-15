@@ -3,9 +3,8 @@ package types
 import (
 	"net/http"
 
-	slice2 "github.com/rancher/norman/pkg/types/slice"
-
 	"github.com/rancher/norman/pkg/httperror"
+	"github.com/rancher/norman/pkg/types/slice"
 )
 
 func (s *Schema) MustCustomizeField(name string, f func(f Field) Field) *Schema {
@@ -17,9 +16,9 @@ func (s *Schema) MustCustomizeField(name string, f func(f Field) Field) *Schema 
 	return s
 }
 
-func (s *Schema) CanList(context *APIOperation) error {
+func (s *Schema) CanList(context *APIRequest) error {
 	if context == nil {
-		if slice2.ContainsString(s.CollectionMethods, http.MethodGet) {
+		if slice.ContainsString(s.CollectionMethods, http.MethodGet) {
 			return nil
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not list "+s.ID)
@@ -27,9 +26,9 @@ func (s *Schema) CanList(context *APIOperation) error {
 	return context.AccessControl.CanList(context, s)
 }
 
-func (s *Schema) CanGet(context *APIOperation) error {
+func (s *Schema) CanGet(context *APIRequest) error {
 	if context == nil {
-		if slice2.ContainsString(s.ResourceMethods, http.MethodGet) {
+		if slice.ContainsString(s.ResourceMethods, http.MethodGet) {
 			return nil
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not get "+s.ID)
@@ -37,9 +36,9 @@ func (s *Schema) CanGet(context *APIOperation) error {
 	return context.AccessControl.CanGet(context, s)
 }
 
-func (s *Schema) CanCreate(context *APIOperation) error {
+func (s *Schema) CanCreate(context *APIRequest) error {
 	if context == nil {
-		if slice2.ContainsString(s.CollectionMethods, http.MethodPost) {
+		if slice.ContainsString(s.CollectionMethods, http.MethodPost) {
 			return nil
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not create "+s.ID)
@@ -47,22 +46,22 @@ func (s *Schema) CanCreate(context *APIOperation) error {
 	return context.AccessControl.CanCreate(context, s)
 }
 
-func (s *Schema) CanUpdate(context *APIOperation) error {
+func (s *Schema) CanUpdate(context *APIRequest) error {
 	if context == nil {
-		if slice2.ContainsString(s.ResourceMethods, http.MethodPut) {
+		if slice.ContainsString(s.ResourceMethods, http.MethodPut) {
 			return nil
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not update "+s.ID)
 	}
-	return context.AccessControl.CanUpdate(context, nil, s)
+	return context.AccessControl.CanUpdate(context, APIObject{}, s)
 }
 
-func (s *Schema) CanDelete(context *APIOperation) error {
+func (s *Schema) CanDelete(context *APIRequest) error {
 	if context == nil {
-		if slice2.ContainsString(s.ResourceMethods, http.MethodDelete) {
+		if slice.ContainsString(s.ResourceMethods, http.MethodDelete) {
 			return nil
 		}
 		return httperror.NewAPIError(httperror.PermissionDenied, "can not delete "+s.ID)
 	}
-	return context.AccessControl.CanDelete(context, nil, s)
+	return context.AccessControl.CanDelete(context, APIObject{}, s)
 }

@@ -13,6 +13,7 @@ type Collection struct {
 	Sort         *Sort                  `json:"sort,omitempty"`
 	Filters      map[string][]Condition `json:"filters,omitempty"`
 	ResourceType string                 `json:"resourceType"`
+	Revision     string                 `json:"revision,omitempty"`
 }
 
 type GenericCollection struct {
@@ -80,20 +81,23 @@ type NamedResourceCollection struct {
 }
 
 type Schema struct {
-	ID                string            `json:"id,omitempty"`
-	CodeName          string            `json:"-"`
-	CodeNamePlural    string            `json:"-"`
-	PkgName           string            `json:"-"`
-	Type              string            `json:"type,omitempty"`
-	Links             map[string]string `json:"links"`
-	PluralName        string            `json:"pluralName,omitempty"`
-	ResourceMethods   []string          `json:"resourceMethods,omitempty"`
-	ResourceFields    map[string]Field  `json:"resourceFields"`
-	ResourceActions   map[string]Action `json:"resourceActions,omitempty"`
-	CollectionMethods []string          `json:"collectionMethods,omitempty"`
-	CollectionFields  map[string]Field  `json:"collectionFields,omitempty"`
-	CollectionActions map[string]Action `json:"collectionActions,omitempty"`
-	CollectionFilters map[string]Filter `json:"collectionFilters,omitempty"`
+	ID                string                 `json:"id,omitempty"`
+	Description       string                 `json:"description,omitempty"`
+	CodeName          string                 `json:"-"`
+	CodeNamePlural    string                 `json:"-"`
+	PkgName           string                 `json:"-"`
+	Type              string                 `json:"type,omitempty"`
+	Links             map[string]string      `json:"links"`
+	PluralName        string                 `json:"pluralName,omitempty"`
+	ResourceMethods   []string               `json:"resourceMethods,omitempty"`
+	ResourceFields    map[string]Field       `json:"resourceFields"`
+	ResourceActions   map[string]Action      `json:"resourceActions,omitempty"`
+	CollectionMethods []string               `json:"collectionMethods,omitempty"`
+	CollectionFields  map[string]Field       `json:"collectionFields,omitempty"`
+	CollectionActions map[string]Action      `json:"collectionActions,omitempty"`
+	CollectionFilters map[string]Filter      `json:"collectionFilters,omitempty"`
+	Attributes        map[string]interface{} `json:"attributes,omitempty"`
+	Dynamic           bool                   `json:"dynamic,omitempty"`
 
 	InternalSchema      *Schema             `json:"-"`
 	Mapper              Mapper              `json:"-"`
@@ -109,6 +113,65 @@ type Schema struct {
 	ErrorHandler        ErrorHandler        `json:"-"`
 	Validator           Validator           `json:"-"`
 	Store               Store               `json:"-"`
+}
+
+func (s *Schema) DeepCopy() *Schema {
+	r := *s
+
+	if s.Links != nil {
+		r.Links = map[string]string{}
+		for k, v := range s.Links {
+			r.Links[k] = v
+		}
+	}
+
+	if s.ResourceFields != nil {
+		r.ResourceFields = map[string]Field{}
+		for k, v := range s.ResourceFields {
+			r.ResourceFields[k] = v
+		}
+	}
+
+	if s.ResourceActions != nil {
+		r.ResourceActions = map[string]Action{}
+		for k, v := range s.ResourceActions {
+			r.ResourceActions[k] = v
+		}
+	}
+
+	if s.CollectionFields != nil {
+		r.CollectionFields = map[string]Field{}
+		for k, v := range s.CollectionFields {
+			r.CollectionFields[k] = v
+		}
+	}
+
+	if s.CollectionActions != nil {
+		r.CollectionActions = map[string]Action{}
+		for k, v := range s.CollectionActions {
+			r.CollectionActions[k] = v
+		}
+	}
+
+	if s.CollectionFilters != nil {
+		r.CollectionFilters = map[string]Filter{}
+		for k, v := range s.CollectionFilters {
+			r.CollectionFilters[k] = v
+		}
+	}
+
+	if s.Attributes != nil {
+		r.Attributes = map[string]interface{}{}
+		for k, v := range s.Attributes {
+			r.Attributes[k] = v
+		}
+	}
+
+	if s.InternalSchema != nil {
+		r.InternalSchema = r.InternalSchema.DeepCopy()
+	}
+
+	return &r
 }
 
 type Field struct {
@@ -127,8 +190,8 @@ type Field struct {
 	ValidChars   string      `json:"validChars,omitempty"`
 	InvalidChars string      `json:"invalidChars,omitempty"`
 	Description  string      `json:"description,omitempty"`
+	Dynamic      bool        `json:"dynamic,omitempty"`
 	CodeName     string      `json:"-"`
-	DynamicField bool        `json:"dynamicField,omitempty"`
 }
 
 type Action struct {
@@ -144,6 +207,6 @@ type ListOpts struct {
 	Filters map[string]interface{}
 }
 
-func (c *Collection) AddAction(apiOp *APIOperation, name string) {
+func (c *Collection) AddAction(apiOp *APIRequest, name string) {
 	c.Actions[name] = apiOp.URLBuilder.CollectionAction(apiOp.Schema, name)
 }

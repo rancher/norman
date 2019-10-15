@@ -3,7 +3,7 @@ package definition
 import (
 	"strings"
 
-	convert2 "github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/pkg/types/convert"
 )
 
 func IsMapType(fieldType string) bool {
@@ -41,5 +41,5 @@ func GetShortTypeFromFull(fullType string) string {
 }
 
 func GetFullType(data map[string]interface{}) string {
-	return convert2.ToString(data["type"])
+	return convert.ToString(data["type"])
 }

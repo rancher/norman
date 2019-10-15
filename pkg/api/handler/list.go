@@ -6,25 +6,25 @@ import (
 	"github.com/rancher/norman/pkg/types"
 )
 
-func ListHandler(request *types.APIOperation, next types.RequestHandler) (interface{}, error) {
+func ListHandler(request *types.APIRequest) (types.APIObject, error) {
 	var (
 		err  error
-		data interface{}
+		data types.APIObject
 	)
 
 	if request.Name == "" {
 		if err := request.AccessControl.CanList(request, request.Schema); err != nil {
-			return nil, err
+			return types.APIObject{}, err
 		}
 	} else {
 		if err := request.AccessControl.CanGet(request, request.Schema); err != nil {
-			return nil, err
+			return types.APIObject{}, err
 		}
 	}
 
 	store := request.Schema.Store
 	if store == nil {
-		return nil, httperror.NewAPIError(httperror.NotFound, "no store found")
+		return types.APIObject{}, httperror.NewAPIError(httperror.NotFound, "no store found")
 	}
 
 	if request.Name == "" {
@@ -32,18 +32,23 @@ func ListHandler(request *types.APIOperation, next types.RequestHandler) (interf
 		// Save the pagination on the context so it's not reset later
 		request.Pagination = opts.Pagination
 		data, err = store.List(request, request.Schema, &opts)
+		data = request.Filter(&opts, request.Schema, data)
+		if data.IsNil() {
+			data = types.ToAPI([]interface{}{})
+		}
 	} else if request.Link == "" {
 		data, err = store.ByID(request, request.Schema, request.Name)
+		data = request.Filter(nil, request.Schema, data)
 	} else {
 		_, err = store.ByID(request, request.Schema, request.Name)
 		if err != nil {
-			return nil, err
+			return types.APIObject{}, err
 		}
-		return request.Schema.LinkHandler(request, nil)
+		return request.Schema.LinkHandler(request)
 	}
 
 	if err != nil {
-		return nil, err
+		return types.APIObject{}, err
 	}
 
 	return data, nil

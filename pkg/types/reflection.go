@@ -7,10 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	convert2 "github.com/rancher/norman/pkg/types/convert"
-	definition2 "github.com/rancher/norman/pkg/types/definition"
-	slice2 "github.com/rancher/norman/pkg/types/slice"
-
+	"github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/pkg/types/definition"
+	"github.com/rancher/norman/pkg/types/slice"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +30,12 @@ func (s *Schemas) getTypeName(t reflect.Type) string {
 	if name, ok := s.typeNames[t]; ok {
 		return name
 	}
-	return convert2.LowerTitle(t.Name())
+	return convert.LowerTitle(t.Name())
+}
+
+func (s *Schemas) SchemaFor(t reflect.Type) *Schema {
+	name := s.getTypeName(t)
+	return s.Schema(name)
 }
 
 func (s *Schemas) AddMapperForType(obj interface{}, mapper ...Mapper) *Schemas {
@@ -45,18 +49,6 @@ func (s *Schemas) AddMapperForType(obj interface{}, mapper ...Mapper) *Schemas {
 		return s.AddMapper(typeName, mapper[0])
 	}
 	return s.AddMapper(typeName, Mappers(mapper))
-}
-
-func (s *Schemas) MustRegister(obj interface{}, externalOverrides ...interface{}) *Schema {
-	if reflect.ValueOf(obj).Kind() == reflect.Ptr {
-		panic(fmt.Errorf("obj cannot be a pointer"))
-	}
-
-	result, err := s.Import(obj, externalOverrides...)
-	if err != nil {
-		panic(err)
-	}
-	return result
 }
 
 func (s *Schemas) MustImport(obj interface{}, externalOverrides ...interface{}) *Schemas {
@@ -92,6 +84,7 @@ func (s *Schemas) newSchemaFromType(t reflect.Type, typeName string) (*Schema, e
 		ResourceFields:    map[string]Field{},
 		ResourceActions:   map[string]Action{},
 		CollectionActions: map[string]Action{},
+		Attributes:        map[string]interface{}{},
 	}
 
 	s.processingTypes[t] = schema
@@ -105,7 +98,7 @@ func (s *Schemas) newSchemaFromType(t reflect.Type, typeName string) (*Schema, e
 }
 
 func (s *Schemas) setupFilters(schema *Schema) {
-	if !slice2.ContainsString(schema.CollectionMethods, http.MethodGet) {
+	if !slice.ContainsString(schema.CollectionMethods, http.MethodGet) {
 		return
 	}
 	for fieldName, field := range schema.ResourceFields {
@@ -126,7 +119,7 @@ func (s *Schemas) setupFilters(schema *Schema) {
 		case "boolean":
 			mods = []ModifierType{ModifierEQ, ModifierNE}
 		default:
-			if definition2.IsReferenceType(field.Type) {
+			if definition.IsReferenceType(field.Type) {
 				mods = []ModifierType{ModifierEQ, ModifierNE, ModifierIn, ModifierNotIn}
 			}
 		}
@@ -154,6 +147,38 @@ func (s *Schemas) MustCustomizeType(obj interface{}, f func(*Schema)) *Schemas {
 	return s
 }
 
+func (s *Schemas) assignMappers(schema *Schema) error {
+	if schema.Mapper != nil {
+		return nil
+	}
+
+	mappers := s.mapper(schema.ID)
+	if schema.CanList(nil) == nil {
+		if s.DefaultMapper != nil {
+			mappers = append([]Mapper{s.DefaultMapper()}, mappers...)
+		}
+		if s.DefaultPostMapper != nil {
+			mappers = append(mappers, s.DefaultPostMapper())
+		}
+	}
+
+	if len(mappers) > 0 {
+		schema.InternalSchema = schema.DeepCopy()
+	}
+
+	mapper := &typeMapper{
+		Mappers: mappers,
+		root:    schema.CanList(nil) == nil,
+	}
+
+	if err := mapper.ModifySchema(schema, s); err != nil {
+		return err
+	}
+
+	schema.Mapper = mapper
+	return nil
+}
+
 func (s *Schemas) importType(t reflect.Type, overrides ...reflect.Type) (*Schema, error) {
 	typeName := s.getTypeName(t)
 
@@ -174,45 +199,20 @@ func (s *Schemas) importType(t reflect.Type, overrides ...reflect.Type) (*Schema
 		return nil, err
 	}
 
-	mappers := s.mapper(schema.ID)
-	if s.DefaultMappers != nil {
-		if schema.CanList(nil) == nil {
-			mappers = append(s.DefaultMappers(), mappers...)
-		}
-	}
-	if s.DefaultPostMappers != nil {
-		mappers = append(mappers, s.DefaultPostMappers()...)
-	}
-
-	if len(mappers) > 0 {
-		copy, err := s.newSchemaFromType(t, typeName)
-		if err != nil {
-			return nil, err
-		}
-		schema.InternalSchema = copy
-	}
-
 	for _, override := range overrides {
 		if err := s.readFields(schema, override); err != nil {
 			return nil, err
 		}
 	}
 
-	mapper := &typeMapper{
-		Mappers: mappers,
-		root:    schema.CanList(nil) == nil,
-	}
+	s.setupFilters(schema)
 
-	if err := mapper.ModifySchema(schema, s); err != nil {
+	if err := s.assignMappers(schema); err != nil {
 		return nil, err
 	}
 
-	s.setupFilters(schema)
-
-	schema.Mapper = mapper
-	s.AddSchema(*schema)
-
-	return s.Schema(schema.ID), s.Err()
+	err = s.AddSchema(*schema)
+	return s.Schema(schema.ID), err
 }
 
 func jsonName(f reflect.StructField) string {
@@ -274,7 +274,7 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 
 		fieldName := jsonName
 		if fieldName == "" {
-			fieldName = convert2.LowerTitle(field.Name)
+			fieldName = convert.LowerTitle(field.Name)
 			if strings.HasSuffix(fieldName, "ID") {
 				fieldName = strings.TrimSuffix(fieldName, "ID") + "Id"
 			}
@@ -288,9 +288,6 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		logrus.Debugf("Inspecting field %s.%s for %v", schema.ID, fieldName, field)
 
 		schemaField := Field{
-			Create:   true,
-			Update:   true,
-			Nullable: true,
 			CodeName: field.Name,
 		}
 
@@ -327,19 +324,25 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		if schemaField.Default != nil {
 			switch schemaField.Type {
 			case "int":
-				n, err := convert2.ToNumber(schemaField.Default)
+				n, err := convert.ToNumber(schemaField.Default)
 				if err != nil {
 					return err
 				}
 				schemaField.Default = n
 			case "float":
-				n, err := convert2.ToFloat(schemaField.Default)
+				n, err := convert.ToFloat(schemaField.Default)
 				if err != nil {
 					return err
 				}
 				schemaField.Default = n
 			case "boolean":
-				schemaField.Default = convert2.ToBool(schemaField.Default)
+				schemaField.Default = convert.ToBool(schemaField.Default)
+			}
+		}
+
+		if s.fieldMappers != nil {
+			if err := s.processFieldsMappers(t, fieldName, schema, field); err != nil {
+				return err
 			}
 		}
 
@@ -350,6 +353,35 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 	if hasType && hasMeta {
 		schema.CollectionMethods = []string{"GET", "POST"}
 		schema.ResourceMethods = []string{"GET", "PUT", "DELETE"}
+	}
+
+	return nil
+}
+
+func (s *Schemas) processFieldsMappers(t reflect.Type, fieldName string, schema *Schema, field reflect.StructField) error {
+	for _, fieldMapper := range strings.Split(field.Tag.Get("mapper"), ",") {
+		if fieldMapper == "" {
+			continue
+		}
+
+		var (
+			name string
+			opts []string
+		)
+		parts := strings.SplitN(fieldMapper, "=", 2)
+		name = parts[0]
+		if len(parts) == 2 {
+			for _, opt := range strings.Split(parts[1], "|") {
+				opts = append(opts, opt)
+			}
+		}
+
+		factory, ok := s.fieldMappers[name]
+		if !ok {
+			return fmt.Errorf("failed to find field mapper [%s] for type [%v]", name, t)
+		}
+
+		s.AddMapper(schema.ID, factory(fieldName, opts...))
 	}
 
 	return nil
@@ -373,16 +405,14 @@ func applyTag(structField *reflect.StructField, field *Field) error {
 			field.Default = value
 		case "nullable":
 			field.Nullable = true
-		case "notnullable":
-			field.Nullable = false
-		case "nocreate":
-			field.Create = false
+		case "create":
+			field.Create = true
 		case "writeOnly":
 			field.WriteOnly = true
 		case "required":
 			field.Required = true
-		case "noupdate":
-			field.Update = false
+		case "update":
+			field.Update = true
 		case "minLength":
 			field.MinLength, err = toInt(value, structField)
 		case "maxLength":

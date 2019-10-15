@@ -17,7 +17,7 @@ var (
 	}
 )
 
-func ValidateMethod(request *types.APIOperation) error {
+func ValidateMethod(request *types.APIRequest) error {
 	if request.Action != "" && request.Method == http.MethodPost {
 		return nil
 	}

@@ -4,27 +4,29 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rancher/norman/pkg/data"
 	"github.com/rancher/norman/pkg/types"
-	convert2 "github.com/rancher/norman/pkg/types/convert"
-	definition2 "github.com/rancher/norman/pkg/types/definition"
-	values2 "github.com/rancher/norman/pkg/types/values"
+	"github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/pkg/types/definition"
+	"github.com/rancher/norman/pkg/types/values"
 )
 
 type Move struct {
+	Optional           bool
 	From, To, CodeName string
 	DestDefined        bool
 	NoDeleteFromField  bool
 }
 
-func (m Move) FromInternal(data map[string]interface{}) {
-	if v, ok := values2.RemoveValue(data, strings.Split(m.From, "/")...); ok {
-		values2.PutValue(data, v, strings.Split(m.To, "/")...)
+func (m Move) FromInternal(data data.Object) {
+	if v, ok := values.RemoveValue(data, strings.Split(m.From, "/")...); ok {
+		values.PutValue(data, v, strings.Split(m.To, "/")...)
 	}
 }
 
-func (m Move) ToInternal(data map[string]interface{}) error {
-	if v, ok := values2.RemoveValue(data, strings.Split(m.To, "/")...); ok {
-		values2.PutValue(data, v, strings.Split(m.From, "/")...)
+func (m Move) ToInternal(data data.Object) error {
+	if v, ok := values.RemoveValue(data, strings.Split(m.To, "/")...); ok {
+		values.PutValue(data, v, strings.Split(m.From, "/")...)
 	}
 	return nil
 }
@@ -35,6 +37,9 @@ func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {
 		return err
 	}
 	if !ok {
+		if m.Optional {
+			return nil
+		}
 		return fmt.Errorf("failed to find field %s on schema %s", m.From, s.ID)
 	}
 
@@ -53,7 +58,7 @@ func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {
 
 	if !m.DestDefined {
 		if m.CodeName == "" {
-			fromField.CodeName = convert2.Capitalize(toFieldName)
+			fromField.CodeName = convert.Capitalize(toFieldName)
 		} else {
 			fromField.CodeName = m.CodeName
 		}
@@ -71,8 +76,8 @@ func getField(schema *types.Schema, schemas *types.Schemas, target string) (*typ
 		}
 
 		fieldType := schema.ResourceFields[part].Type
-		if definition2.IsArrayType(fieldType) {
-			fieldType = definition2.SubType(fieldType)
+		if definition.IsArrayType(fieldType) {
+			fieldType = definition.SubType(fieldType)
 		}
 		subSchema := schemas.Schema(fieldType)
 		if subSchema == nil {

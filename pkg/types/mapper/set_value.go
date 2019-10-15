@@ -1,70 +1,29 @@
 package mapper
 
 import (
-	"fmt"
-	"strings"
-
+	"github.com/rancher/norman/pkg/data"
 	"github.com/rancher/norman/pkg/types"
-	values2 "github.com/rancher/norman/pkg/types/values"
 )
 
 type SetValue struct {
-	Field, To        string
-	Value            interface{}
-	IfEq             interface{}
-	IgnoreDefinition bool
+	Field         string
+	InternalValue interface{}
+	ExternalValue interface{}
 }
 
-func (s SetValue) FromInternal(data map[string]interface{}) {
-	if s.IfEq == nil {
-		values2.PutValue(data, s.Value, strings.Split(s.getTo(), "/")...)
-		return
-	}
-
-	v, ok := values2.GetValue(data, strings.Split(s.Field, "/")...)
-	if !ok {
-		return
-	}
-
-	if v == s.IfEq {
-		values2.PutValue(data, s.Value, strings.Split(s.getTo(), "/")...)
+func (d SetValue) FromInternal(data data.Object) {
+	if d.ExternalValue != nil {
+		data[d.Field] = d.ExternalValue
 	}
 }
 
-func (s SetValue) getTo() string {
-	if s.To == "" {
-		return s.Field
+func (d SetValue) ToInternal(data data.Object) error {
+	if d.InternalValue != nil {
+		data[d.Field] = d.InternalValue
 	}
-	return s.To
-}
-
-func (s SetValue) ToInternal(data map[string]interface{}) error {
-	v, ok := values2.GetValue(data, strings.Split(s.getTo(), "/")...)
-	if !ok {
-		return nil
-	}
-
-	if s.IfEq == nil {
-		values2.RemoveValue(data, strings.Split(s.Field, "/")...)
-	} else if v == s.Value {
-		values2.PutValue(data, s.IfEq, strings.Split(s.Field, "/")...)
-	}
-
 	return nil
 }
 
-func (s SetValue) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
-	if s.IgnoreDefinition {
-		return nil
-	}
-
-	_, _, _, ok, err := getField(schema, schemas, s.getTo())
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("failed to find defined field for %s on schemas %s", s.getTo(), schema.ID)
-	}
-
-	return nil
+func (d SetValue) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
+	return ValidateField(d.Field, schema)
 }

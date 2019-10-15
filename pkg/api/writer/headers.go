@@ -4,12 +4,12 @@ import (
 	"github.com/rancher/norman/pkg/types"
 )
 
-func AddCommonResponseHeader(apiOp *types.APIOperation) error {
+func AddCommonResponseHeader(apiOp *types.APIRequest) error {
 	addExpires(apiOp)
 	return addSchemasHeader(apiOp)
 }
 
-func addSchemasHeader(apiOp *types.APIOperation) error {
+func addSchemasHeader(apiOp *types.APIRequest) error {
 	schema := apiOp.Schemas.Schema("schema")
 	if schema == nil {
 		return nil
@@ -19,6 +19,6 @@ func addSchemasHeader(apiOp *types.APIOperation) error {
 	return nil
 }
 
-func addExpires(apiOp *types.APIOperation) {
+func addExpires(apiOp *types.APIRequest) {
 	apiOp.Response.Header().Set("Expires", "Wed 24 Feb 1982 18:42:00 GMT")
 }

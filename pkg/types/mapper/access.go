@@ -3,6 +3,7 @@ package mapper
 import (
 	"strings"
 
+	"github.com/rancher/norman/pkg/data"
 	"github.com/rancher/norman/pkg/types"
 )
 
@@ -11,10 +12,10 @@ type Access struct {
 	Optional bool
 }
 
-func (e Access) FromInternal(data map[string]interface{}) {
+func (e Access) FromInternal(data data.Object) {
 }
 
-func (e Access) ToInternal(data map[string]interface{}) error {
+func (e Access) ToInternal(data data.Object) error {
 	return nil
 }
 

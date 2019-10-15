@@ -1,50 +1,52 @@
 package handler
 
 import (
+	"github.com/rancher/norman/pkg/httperror"
 	"github.com/rancher/norman/pkg/parse"
-	builder2 "github.com/rancher/norman/pkg/parse/builder"
+	"github.com/rancher/norman/pkg/parse/builder"
 	"github.com/rancher/norman/pkg/types"
 )
 
-func ParseAndValidateBody(apiOp *types.APIOperation, create bool) (map[string]interface{}, error) {
+func ParseAndValidateBody(apiOp *types.APIRequest, create bool) (types.APIObject, error) {
 	data, err := parse.Body(apiOp.Request)
 	if err != nil {
-		return nil, err
+		return types.APIObject{}, err
 	}
 
-	b := builder2.NewBuilder(apiOp)
+	b := builder.NewBuilder(apiOp)
 
-	op := builder2.Create
+	op := builder.Create
 	if !create {
-		op = builder2.Update
+		op = builder.Update
 	}
 	if apiOp.Schema.InputFormatter != nil {
 		err = apiOp.Schema.InputFormatter(apiOp, apiOp.Schema, data, create)
 		if err != nil {
-			return nil, err
+			return types.APIObject{}, err
 		}
 	}
 	data, err = b.Construct(apiOp.Schema, data, op)
 	if err != nil {
-		return nil, err
+		return types.APIObject{}, err
 	}
 
 	return data, nil
 }
 
-func ParseAndValidateActionBody(apiOp *types.APIOperation, actionInputSchema *types.Schema) (map[string]interface{}, error) {
-	data, err := parse.Body(apiOp.Request)
-	if err != nil {
-		return nil, err
+func validateGet(apiOp *types.APIRequest, schema *types.Schema, id string) error {
+	store := schema.Store
+	if store == nil {
+		return nil
 	}
 
-	b := builder2.NewBuilder(apiOp)
-
-	op := builder2.Create
-	data, err = b.Construct(actionInputSchema, data, op)
+	existing, err := store.ByID(apiOp, schema, id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return data, nil
+	if apiOp.Filter(nil, schema, existing).IsNil() {
+		return httperror.NewAPIError(httperror.NotFound, "failed to find "+id)
+	}
+
+	return nil
 }

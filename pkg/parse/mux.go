@@ -13,6 +13,7 @@ func MuxURLParser(rw http.ResponseWriter, req *http.Request, schemas *types.Sche
 		Type:   vars["type"],
 		Name:   vars["name"],
 		Link:   vars["link"],
+		Prefix: vars["prefix"],
 		Method: req.Method,
 		Action: vars["action"],
 		Query:  req.URL.Query(),

@@ -1,6 +1,8 @@
 package builtin
 
 import (
+	"net/http"
+
 	"github.com/rancher/norman/pkg/store/schema"
 	"github.com/rancher/norman/pkg/types"
 )
@@ -18,12 +20,13 @@ var (
 			"collectionMethods": {Type: "array[string]"},
 			"pluralName":        {Type: "string"},
 			"resourceActions":   {Type: "map[json]"},
+			"attributes":        {Type: "map[json]"},
 			"resourceFields":    {Type: "map[json]"},
 			"resourceMethods":   {Type: "array[string]"},
 			"version":           {Type: "map[json]"},
 		},
-		//Formatter: SchemaFormatter,
-		Store: schema.NewSchemaStore(),
+		Formatter: SchemaFormatter,
+		Store:     schema.NewSchemaStore(),
 	}
 
 	Error = types.Schema{
@@ -51,53 +54,30 @@ var (
 		},
 	}
 
-	APIRoot = types.Schema{
-		ID:                "apiRoot",
-		CollectionMethods: []string{"GET"},
-		ResourceMethods:   []string{"GET"},
-		ResourceFields: map[string]types.Field{
-			"apiVersion": {Type: "map[json]"},
-			"path":       {Type: "string"},
-		},
-		Formatter: APIRootFormatter,
-		Store:     NewAPIRootStore(nil, nil),
-	}
-
-	Schemas = types.NewSchemas().
-		AddSchema(Schema).
-		AddSchema(Error).
-		AddSchema(Collection).
-		AddSchema(APIRoot)
+	Schemas = types.EmptySchemas().
+		MustAddSchema(Schema).
+		MustAddSchema(Error).
+		MustAddSchema(Collection)
 )
 
-func apiVersionFromMap(schemas *types.Schemas, apiVersion map[string]interface{}) string {
-	version, _ := apiVersion["version"].(string)
-	return version
+func SchemaFormatter(apiOp *types.APIRequest, resource *types.RawResource) {
+	schema := apiOp.Schemas.Schema(resource.ID)
+	if schema == nil {
+		return
+	}
+
+	collectionLink := getSchemaCollectionLink(apiOp, schema)
+	if collectionLink != "" {
+		resource.Links["collection"] = collectionLink
+	}
 }
 
-//func SchemaFormatter(apiOp *types.APIContext, resource *types.RawResource) {
-//	data, _ := resource.Values["version"].(map[string]interface{})
-//	apiVersion := apiVersionFromMap(apiOp.Schemas, data)
-//
-//	schema := apiOp.Schemas.Schema(&apiVersion, resource.ID)
-//	if schema == nil {
-//		return
-//	}
-//
-//	collectionLink := getSchemaCollectionLink(apiOp, schema, &apiVersion)
-//	if collectionLink != "" {
-//		resource.Links["collection"] = collectionLink
-//	}
-//
-//	resource.Links["self"] = apiOp.URLBuilder.ResourceLink(&Schema)
-//}
-//
-//func getSchemaCollectionLink(apiOp *types.APIContext, schema *types.Schema, apiVersion *types.APIVersion) string {
-//	if schema != nil && contains(schema.CollectionMethods, http.MethodGet) {
-//		return apiOp.URLBuilder.Collection(schema, apiVersion)
-//	}
-//	return ""
-//}
+func getSchemaCollectionLink(apiOp *types.APIRequest, schema *types.Schema) string {
+	if schema != nil && contains(schema.CollectionMethods, http.MethodGet) {
+		return apiOp.URLBuilder.Collection(schema)
+	}
+	return ""
+}
 
 func contains(list []string, needle string) bool {
 	for _, v := range list {

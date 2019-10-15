@@ -38,13 +38,13 @@ type HTMLResponseWriter struct {
 	APIUIVersion StringGetter
 }
 
-func (h *HTMLResponseWriter) start(apiOp *types.APIOperation, code int, obj interface{}) {
+func (h *HTMLResponseWriter) start(apiOp *types.APIRequest, code int, obj interface{}) {
 	AddCommonResponseHeader(apiOp)
 	apiOp.Response.Header().Set("content-type", "text/html")
 	apiOp.Response.WriteHeader(code)
 }
 
-func (h *HTMLResponseWriter) Write(apiOp *types.APIOperation, code int, obj interface{}) {
+func (h *HTMLResponseWriter) Write(apiOp *types.APIRequest, code int, obj interface{}) {
 	h.start(apiOp, code, obj)
 	schemaSchema := apiOp.Schemas.Schema("schema")
 	headerString := start

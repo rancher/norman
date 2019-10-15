@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ErrorHandler(request *types.APIOperation, err error) {
+func ErrorHandler(request *types.APIRequest, err error) {
 	var error *httperror.APIError
 	if apiError, ok := err.(*httperror.APIError); ok {
 		if apiError.Cause != nil {

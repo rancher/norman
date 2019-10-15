@@ -2,72 +2,43 @@ package schema
 
 import (
 	"encoding/json"
-	"net/http"
 	"strings"
 
-	empty2 "github.com/rancher/norman/pkg/store/empty"
-	"github.com/rancher/norman/pkg/types"
-	definition2 "github.com/rancher/norman/pkg/types/definition"
-	slice2 "github.com/rancher/norman/pkg/types/slice"
-
 	"github.com/rancher/norman/pkg/httperror"
+	"github.com/rancher/norman/pkg/store/empty"
+	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/pkg/types/definition"
 )
 
 type Store struct {
-	empty2.Store
+	empty.Store
 }
 
 func NewSchemaStore() types.Store {
 	return &Store{}
 }
 
-func (s *Store) ByID(apiOp *types.APIOperation, schema *types.Schema, id string) (map[string]interface{}, error) {
+func (s *Store) ByID(apiOp *types.APIRequest, schema *types.Schema, id string) (types.APIObject, error) {
 	for _, schema := range apiOp.Schemas.Schemas() {
 		if strings.EqualFold(schema.ID, id) {
 			schemaData := map[string]interface{}{}
 
-			data, err := json.Marshal(s.modifyForAccessControl(apiOp, *schema))
+			data, err := json.Marshal(schema)
 			if err != nil {
-				return nil, err
+				return types.APIObject{}, err
 			}
 
-			return schemaData, json.Unmarshal(data, &schemaData)
+			return types.ToAPI(schemaData), json.Unmarshal(data, &schemaData)
 		}
 	}
-	return nil, httperror.NewAPIError(httperror.NotFound, "no such schema")
+	return types.APIObject{}, httperror.NewAPIError(httperror.NotFound, "no such schema")
 }
 
-func (s *Store) modifyForAccessControl(context *types.APIOperation, schema types.Schema) *types.Schema {
-	var resourceMethods []string
-	if slice2.ContainsString(schema.ResourceMethods, http.MethodPut) && schema.CanUpdate(context) == nil {
-		resourceMethods = append(resourceMethods, http.MethodPut)
-	}
-	if slice2.ContainsString(schema.ResourceMethods, http.MethodDelete) && schema.CanDelete(context) == nil {
-		resourceMethods = append(resourceMethods, http.MethodDelete)
-	}
-	if slice2.ContainsString(schema.ResourceMethods, http.MethodGet) && schema.CanGet(context) == nil {
-		resourceMethods = append(resourceMethods, http.MethodGet)
-	}
-
-	var collectionMethods []string
-	if slice2.ContainsString(schema.CollectionMethods, http.MethodPost) && schema.CanCreate(context) == nil {
-		collectionMethods = append(collectionMethods, http.MethodPost)
-	}
-	if slice2.ContainsString(schema.CollectionMethods, http.MethodGet) && schema.CanList(context) == nil {
-		collectionMethods = append(collectionMethods, http.MethodGet)
-	}
-
-	schema.ResourceMethods = resourceMethods
-	schema.CollectionMethods = collectionMethods
-
-	return &schema
-}
-
-func (s *Store) Watch(apiOp *types.APIOperation, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
+func (s *Store) Watch(apiOp *types.APIRequest, schema *types.Schema, wr types.WatchRequest) (chan types.APIEvent, error) {
 	return nil, nil
 }
 
-func (s *Store) List(apiOp *types.APIOperation, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
+func (s *Store) List(apiOp *types.APIRequest, schema *types.Schema, opt *types.QueryOptions) (types.APIObject, error) {
 	schemaMap := apiOp.Schemas.SchemasByID()
 	schemas := make([]*types.Schema, 0, len(schemaMap))
 	schemaData := make([]map[string]interface{}, 0, len(schemaMap))
@@ -86,26 +57,29 @@ func (s *Store) List(apiOp *types.APIOperation, schema *types.Schema, opt *types
 
 	data, err := json.Marshal(schemas)
 	if err != nil {
-		return nil, err
+		return types.APIObject{}, err
 	}
 
-	return schemaData, json.Unmarshal(data, &schemaData)
+	if err := json.Unmarshal(data, &schemaData); err != nil {
+		return types.APIObject{}, err
+	}
+	return types.ToAPI(schemaData), nil
 }
 
-func (s *Store) addSchema(apiOp *types.APIOperation, schema *types.Schema, schemaMap map[string]*types.Schema, schemas []*types.Schema, included map[string]bool) []*types.Schema {
+func (s *Store) addSchema(apiOp *types.APIRequest, schema *types.Schema, schemaMap map[string]*types.Schema, schemas []*types.Schema, included map[string]bool) []*types.Schema {
 	included[schema.ID] = true
 	schemas = s.traverseAndAdd(apiOp, schema, schemaMap, schemas, included)
-	schemas = append(schemas, s.modifyForAccessControl(apiOp, *schema))
+	schemas = append(schemas, schema)
 	return schemas
 }
 
-func (s *Store) traverseAndAdd(apiOp *types.APIOperation, schema *types.Schema, schemaMap map[string]*types.Schema, schemas []*types.Schema, included map[string]bool) []*types.Schema {
+func (s *Store) traverseAndAdd(apiOp *types.APIRequest, schema *types.Schema, schemaMap map[string]*types.Schema, schemas []*types.Schema, included map[string]bool) []*types.Schema {
 	for _, field := range schema.ResourceFields {
 		t := ""
 		subType := field.Type
 		for subType != t {
 			t = subType
-			subType = definition2.SubType(t)
+			subType = definition.SubType(t)
 		}
 
 		if refSchema, ok := schemaMap[t]; ok && !included[t] {

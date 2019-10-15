@@ -8,18 +8,15 @@ import (
 	"github.com/rancher/norman/pkg/types"
 )
 
-var (
-	defaultLimit = int64(1000)
-	maxLimit     = int64(3000)
-)
-
-func QueryOptions(apiOp *types.APIOperation, schema *types.Schema) types.QueryOptions {
+func QueryOptions(apiOp *types.APIRequest, schema *types.Schema) types.QueryOptions {
 	req := apiOp.Request
 	if req.Method != http.MethodGet {
 		return types.QueryOptions{}
 	}
 
-	result := &types.QueryOptions{}
+	result := &types.QueryOptions{
+		Options: map[string]string{},
+	}
 
 	result.Sort = parseSort(schema, apiOp)
 	result.Pagination = parsePagination(apiOp)
@@ -28,7 +25,7 @@ func QueryOptions(apiOp *types.APIOperation, schema *types.Schema) types.QueryOp
 	return *result
 }
 
-func parseOrder(apiOp *types.APIOperation) types.SortOrder {
+func parseOrder(apiOp *types.APIRequest) types.SortOrder {
 	order := apiOp.Query.Get("order")
 	if types.SortOrder(order) == types.DESC {
 		return types.DESC
@@ -36,7 +33,7 @@ func parseOrder(apiOp *types.APIOperation) types.SortOrder {
 	return types.ASC
 }
 
-func parseSort(schema *types.Schema, apiOp *types.APIOperation) types.Sort {
+func parseSort(schema *types.Schema, apiOp *types.APIRequest) types.Sort {
 	sortField := apiOp.Query.Get("sort")
 	if _, ok := schema.CollectionFilters[sortField]; !ok {
 		sortField = ""
@@ -47,7 +44,7 @@ func parseSort(schema *types.Schema, apiOp *types.APIOperation) types.Sort {
 	}
 }
 
-func parsePagination(apiOp *types.APIOperation) *types.Pagination {
+func parsePagination(apiOp *types.APIRequest) *types.Pagination {
 	if apiOp.Pagination != nil {
 		return apiOp.Pagination
 	}
@@ -57,7 +54,6 @@ func parsePagination(apiOp *types.APIOperation) *types.Pagination {
 	marker := q.Get("marker")
 
 	result := &types.Pagination{
-		Limit:  &defaultLimit,
 		Marker: marker,
 	}
 
@@ -67,9 +63,7 @@ func parsePagination(apiOp *types.APIOperation) *types.Pagination {
 			return result
 		}
 
-		if limitInt > maxLimit {
-			result.Limit = &maxLimit
-		} else if limitInt >= 0 {
+		if limitInt >= 0 {
 			result.Limit = &limitInt
 		}
 	}
@@ -90,7 +84,7 @@ func parseNameAndOp(value string) (string, types.ModifierType) {
 	return name, types.ModifierType(op)
 }
 
-func parseFilters(schema *types.Schema, apiOp *types.APIOperation) []*types.QueryCondition {
+func parseFilters(schema *types.Schema, apiOp *types.APIRequest) []*types.QueryCondition {
 	var conditions []*types.QueryCondition
 	for key, values := range apiOp.Query {
 		if key == "namespaces" || key == "namespace" {

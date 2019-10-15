@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 
+	"github.com/rancher/norman/pkg/data"
 	"github.com/rancher/norman/pkg/parse"
-	builder2 "github.com/rancher/norman/pkg/parse/builder"
-
+	"github.com/rancher/norman/pkg/parse/builder"
 	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/pkg/types/convert"
 	"github.com/rancher/norman/pkg/types/definition"
 	"github.com/sirupsen/logrus"
 )
@@ -18,36 +20,63 @@ type EncodingResponseWriter struct {
 	Encoder     func(io.Writer, interface{}) error
 }
 
-func (j *EncodingResponseWriter) start(apiOp *types.APIOperation, code int, obj interface{}) {
+func (j *EncodingResponseWriter) start(apiOp *types.APIRequest, code int, obj interface{}) {
 	AddCommonResponseHeader(apiOp)
 	apiOp.Response.Header().Set("content-type", j.ContentType)
 	apiOp.Response.WriteHeader(code)
 }
 
-func (j *EncodingResponseWriter) Write(apiOp *types.APIOperation, code int, obj interface{}) {
+func (j *EncodingResponseWriter) Write(apiOp *types.APIRequest, code int, obj interface{}) {
 	j.start(apiOp, code, obj)
 	j.Body(apiOp, apiOp.Response, obj)
 }
 
-func (j *EncodingResponseWriter) Body(apiOp *types.APIOperation, writer io.Writer, obj interface{}) error {
+func (j *EncodingResponseWriter) Body(apiOp *types.APIRequest, writer io.Writer, obj interface{}) error {
 	return j.VersionBody(apiOp, writer, obj)
 
 }
 
-func (j *EncodingResponseWriter) VersionBody(apiOp *types.APIOperation, writer io.Writer, obj interface{}) error {
-	var output interface{}
+func (j *EncodingResponseWriter) VersionBody(apiOp *types.APIRequest, writer io.Writer, obj interface{}) error {
+	var (
+		output   interface{}
+		revision string
+	)
 
-	builder := builder2.NewBuilder(apiOp)
+	builder := builder.NewBuilder(apiOp)
+	if apiObject, ok := obj.(types.APIObject); ok {
+		obj = apiObject.Raw()
+		revision = apiObject.ListRevision
+	}
 
 	switch v := obj.(type) {
 	case []interface{}:
 		output = j.writeInterfaceSlice(builder, apiOp, v)
+	case data.List:
+		output = j.writeMapSlice(builder, apiOp, v)
 	case []map[string]interface{}:
 		output = j.writeMapSlice(builder, apiOp, v)
+	case data.Object:
+		output = j.convert(builder, apiOp, v)
 	case map[string]interface{}:
 		output = j.convert(builder, apiOp, v)
 	case types.RawResource:
 		output = v
+	default:
+		if v != nil {
+			mapData, err := convert.EncodeToMap(obj)
+			if err != nil {
+				return err
+			}
+			schema := apiOp.Schemas.SchemaFor(reflect.TypeOf(obj))
+			if schema != nil && mapData != nil {
+				mapData["type"] = schema.ID
+			}
+			output = j.convert(builder, apiOp, mapData)
+		}
+	}
+
+	if list, ok := output.(*types.GenericCollection); ok && revision != "" {
+		list.Revision = revision
 	}
 
 	if output != nil {
@@ -56,7 +85,7 @@ func (j *EncodingResponseWriter) VersionBody(apiOp *types.APIOperation, writer i
 
 	return nil
 }
-func (j *EncodingResponseWriter) writeMapSlice(builder *builder2.Builder, apiOp *types.APIOperation, input []map[string]interface{}) *types.GenericCollection {
+func (j *EncodingResponseWriter) writeMapSlice(builder builder.Builder, apiOp *types.APIRequest, input []map[string]interface{}) *types.GenericCollection {
 	collection := newCollection(apiOp)
 	for _, value := range input {
 		converted := j.convert(builder, apiOp, value)
@@ -72,7 +101,7 @@ func (j *EncodingResponseWriter) writeMapSlice(builder *builder2.Builder, apiOp 
 	return collection
 }
 
-func (j *EncodingResponseWriter) writeInterfaceSlice(builder *builder2.Builder, apiOp *types.APIOperation, input []interface{}) *types.GenericCollection {
+func (j *EncodingResponseWriter) writeInterfaceSlice(builder builder.Builder, apiOp *types.APIRequest, input []interface{}) *types.GenericCollection {
 	collection := newCollection(apiOp)
 	for _, value := range input {
 		switch v := value.(type) {
@@ -100,16 +129,19 @@ func toString(val interface{}) string {
 	return fmt.Sprint(val)
 }
 
-func (j *EncodingResponseWriter) convert(b *builder2.Builder, context *types.APIOperation, input map[string]interface{}) *types.RawResource {
+func (j *EncodingResponseWriter) convert(b builder.Builder, context *types.APIRequest, input map[string]interface{}) *types.RawResource {
 	schema := context.Schemas.Schema(definition.GetFullType(input))
+	if schema == nil {
+		schema = context.Schema
+	}
 	if schema == nil {
 		return nil
 	}
-	op := builder2.List
+	op := builder.List
 	if context.Method == http.MethodPost {
-		op = builder2.ListForCreate
+		op = builder.ListForCreate
 	}
-	data, err := b.Construct(schema, input, op)
+	data, err := b.Construct(schema, types.ToAPI(input), op)
 	if err != nil {
 		logrus.Errorf("Failed to construct object on output: %v", err)
 		return nil
@@ -121,35 +153,41 @@ func (j *EncodingResponseWriter) convert(b *builder2.Builder, context *types.API
 		Schema:      schema,
 		Links:       map[string]string{},
 		Actions:     map[string]string{},
-		Values:      data,
+		Values:      data.Map(),
 		ActionLinks: context.Request.Header.Get("X-API-Action-Links") != "",
 	}
-
-	j.addLinks(b, schema, context, input, rawResource)
 
 	if schema.Formatter != nil {
 		schema.Formatter(context, rawResource)
 	}
 
+	j.addLinks(b, schema, context, input, rawResource)
+
 	return rawResource
 }
 
-func (j *EncodingResponseWriter) addLinks(b *builder2.Builder, schema *types.Schema, context *types.APIOperation, input map[string]interface{}, rawResource *types.RawResource) {
+func (j *EncodingResponseWriter) addLinks(b builder.Builder, schema *types.Schema, context *types.APIRequest, input map[string]interface{}, rawResource *types.RawResource) {
 	if rawResource.ID == "" {
 		return
 	}
 
 	self := context.URLBuilder.ResourceLink(rawResource.Schema, rawResource.ID)
-	rawResource.Links["self"] = self
-	if context.AccessControl.CanUpdate(context, input, schema) == nil {
-		rawResource.Links["update"] = self
+	if _, ok := rawResource.Links["self"]; !ok {
+		rawResource.Links["self"] = self
 	}
-	if context.AccessControl.CanDelete(context, input, schema) == nil {
-		rawResource.Links["remove"] = self
+	if _, ok := rawResource.Links["update"]; !ok {
+		if context.AccessControl.CanUpdate(context, types.ToAPI(input), schema) == nil {
+			rawResource.Links["update"] = self
+		}
+	}
+	if _, ok := rawResource.Links["remove"]; !ok {
+		if context.AccessControl.CanDelete(context, types.ToAPI(input), schema) == nil {
+			rawResource.Links["remove"] = self
+		}
 	}
 }
 
-func newCollection(apiOp *types.APIOperation) *types.GenericCollection {
+func newCollection(apiOp *types.APIRequest) *types.GenericCollection {
 	result := &types.GenericCollection{
 		Collection: types.Collection{
 			Type:         "collection",

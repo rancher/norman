@@ -17,7 +17,7 @@ const (
 	csrfHeader = "X-API-CSRF"
 )
 
-func ValidateAction(request *types.APIOperation) (*types.Action, error) {
+func ValidateAction(request *types.APIRequest) (*types.Action, error) {
 	if request.Action == "" || request.Link != "" || request.Method != http.MethodPost {
 		return nil, nil
 	}
@@ -46,7 +46,7 @@ func ValidateAction(request *types.APIOperation) (*types.Action, error) {
 	return &action, nil
 }
 
-func CheckCSRF(apiOp *types.APIOperation) error {
+func CheckCSRF(apiOp *types.APIRequest) error {
 	if !parse.IsBrowser(apiOp.Request, false) {
 		return nil
 	}

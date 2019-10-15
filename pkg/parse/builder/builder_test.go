@@ -20,7 +20,7 @@ func TestEmptyStringWithDefault(t *testing.T) {
 	schemas := types.NewSchemas()
 	schemas.AddSchema(*schema)
 
-	builder := NewBuilder(&types.APIOperation{})
+	builder := NewBuilder(&types.APIRequest{})
 
 	// Test if no field we set to "foo"
 	result, err := builder.Construct(schema, nil, Create)

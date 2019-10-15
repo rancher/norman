@@ -3,6 +3,7 @@ package mapper
 import (
 	"fmt"
 
+	"github.com/rancher/norman/pkg/data"
 	"github.com/rancher/norman/pkg/types"
 )
 
@@ -16,8 +17,8 @@ type Embed struct {
 	EmptyValueOk   bool
 }
 
-func (e *Embed) FromInternal(data map[string]interface{}) {
-	sub, _ := data[e.Field].(map[string]interface{})
+func (e *Embed) FromInternal(data data.Object) {
+	sub := data.Map(e.Field)
 	for _, fieldName := range e.embeddedFields {
 		if v, ok := sub[fieldName]; ok {
 			data[fieldName] = v
@@ -26,7 +27,7 @@ func (e *Embed) FromInternal(data map[string]interface{}) {
 	delete(data, e.Field)
 }
 
-func (e *Embed) ToInternal(data map[string]interface{}) error {
+func (e *Embed) ToInternal(data data.Object) error {
 	if data == nil {
 		return nil
 	}
