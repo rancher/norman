@@ -91,6 +91,7 @@ type {{.schema.CodeName}}Interface interface {
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteNamespaced(namespace, name string, options *metav1.DeleteOptions) error
 	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
+	ListNamespaced(namespace string, opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
@@ -276,6 +277,11 @@ func (s *{{.schema.ID}}Client) DeleteNamespaced(namespace, name string, options 
 
 func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
 	obj, err := s.objectClient.List(opts)
+	return obj.(*{{.schema.CodeName}}List), err
+}
+
+func (s *{{.schema.ID}}Client) ListNamespaced(namespace string, opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
+	obj, err := s.objectClient.ListNamespaced(namespace, opts)
 	return obj.(*{{.schema.CodeName}}List), err
 }
 
