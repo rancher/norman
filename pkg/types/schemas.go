@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/convert"
 	"github.com/rancher/wrangler/pkg/merr"
 	"github.com/rancher/wrangler/pkg/name"
 )
@@ -64,6 +64,14 @@ func NewSchemas(schemas ...*Schemas) (*Schemas, error) {
 
 func (s *Schemas) Init(initFunc SchemasInitFunc) *Schemas {
 	return initFunc(s)
+}
+
+func (s *Schemas) MustAddSchemas(schema *Schemas) *Schemas {
+	s, err := s.AddSchemas(schema)
+	if err != nil {
+		panic(err)
+	}
+	return s
 }
 
 func (s *Schemas) AddSchemas(schema *Schemas) (*Schemas, error) {

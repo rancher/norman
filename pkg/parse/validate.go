@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rancher/norman/pkg/httperror"
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/httperror"
+	"github.com/rancher/norman/v2/pkg/types"
 )
 
 var (
@@ -13,6 +13,7 @@ var (
 		http.MethodPost:   true,
 		http.MethodGet:    true,
 		http.MethodPut:    true,
+		http.MethodPatch:  true,
 		http.MethodDelete: true,
 	}
 )
@@ -23,7 +24,7 @@ func ValidateMethod(request *types.APIRequest) error {
 	}
 
 	if !supportedMethods[request.Method] {
-		return httperror.NewAPIError(httperror.MethodNotAllowed, fmt.Sprintf("Method %s not supported", request.Method))
+		return httperror.NewAPIError(httperror.MethodNotAllowed, fmt.Sprintf("Invalid method %s not supported", request.Method))
 	}
 
 	if request.Type == "" || request.Schema == nil || request.Link != "" {

@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/rancher/norman/pkg/data"
-	"github.com/rancher/norman/pkg/types/convert"
-	"github.com/rancher/norman/pkg/types/values"
+	"github.com/rancher/norman/v2/pkg/data"
+	"github.com/rancher/norman/v2/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/values"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 )
@@ -208,6 +208,12 @@ type WatchRequest struct {
 	Revision string
 }
 
+var (
+	ChangeAPIEvent = "resource.change"
+	RemoveAPIEvent = "resource.remove"
+	CreateAPIEvent = "resource.create"
+)
+
 type APIEvent struct {
 	Name         string    `json:"name,omitempty"`
 	ResourceType string    `json:"resourceType,omitempty"`
@@ -338,15 +344,15 @@ func Namespace(data map[string]interface{}) string {
 	return convert.ToString(values.GetValueN(data, "metadata", "namespace"))
 }
 
-func APIChan(c <-chan APIEvent, f func(APIEvent) APIEvent) chan APIEvent {
+func APIChan(c <-chan APIEvent, f func(APIObject) APIObject) chan APIEvent {
 	if c == nil {
 		return nil
 	}
 	result := make(chan APIEvent)
 	go func() {
 		for data := range c {
-			modified := f(data)
-			result <- modified
+			data.Object = f(data.Object)
+			result <- data
 		}
 		close(result)
 	}()

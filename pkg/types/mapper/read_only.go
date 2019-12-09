@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types"
 )
 
 type ReadOnly struct {

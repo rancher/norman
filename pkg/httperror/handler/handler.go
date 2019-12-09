@@ -3,13 +3,16 @@ package handler
 import (
 	"net/url"
 
-	"github.com/rancher/norman/pkg/httperror"
-
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/httperror"
+	"github.com/rancher/norman/v2/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 
 func ErrorHandler(request *types.APIRequest, err error) {
+	if err == httperror.ErrComplete {
+		return
+	}
+
 	var error *httperror.APIError
 	if apiError, ok := err.(*httperror.APIError); ok {
 		if apiError.Cause != nil {

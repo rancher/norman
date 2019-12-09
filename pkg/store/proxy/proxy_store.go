@@ -1,16 +1,17 @@
 package proxy
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/rancher/norman/pkg/types"
-	"github.com/rancher/norman/pkg/types/convert"
-	"github.com/rancher/norman/pkg/types/values"
+	"github.com/rancher/norman/v2/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/values"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,7 +81,7 @@ func (s *Store) List(apiOp *types.APIRequest, schema *types.Schema, opt *types.Q
 			return types.APIObject{}, err
 		}
 
-		resultList, err = k8sClient.List(metav1.ListOptions{})
+		resultList, err = k8sClient.List(listOpts(apiOp))
 		if err != nil {
 			return types.APIObject{}, err
 		}
@@ -120,6 +121,18 @@ func (s *Store) List(apiOp *types.APIRequest, schema *types.Schema, opt *types.Q
 	return apiObject, nil
 }
 
+func listOpts(apiOp *types.APIRequest) metav1.ListOptions {
+	opts := metav1.ListOptions{
+		LabelSelector:   apiOp.Request.URL.Query().Get("labelSelector"),
+		ResourceVersion: apiOp.Request.URL.Query().Get("resourceVersion"),
+		Continue:        apiOp.Request.URL.Query().Get("continue"),
+	}
+	if apiOp.Pagination.Limit != nil {
+		opts.Limit = *apiOp.Pagination.Limit
+	}
+	return opts
+}
+
 func (s *Store) listNamespace(namespace string, apiOp types.APIRequest, schema *types.Schema) (*unstructured.UnstructuredList, error) {
 	apiOp.Namespaces = []string{namespace}
 	k8sClient, err := s.clientGetter.Client(&apiOp, schema)
@@ -127,7 +140,7 @@ func (s *Store) listNamespace(namespace string, apiOp types.APIRequest, schema *
 		return nil, err
 	}
 
-	return k8sClient.List(metav1.ListOptions{})
+	return k8sClient.List(listOpts(&apiOp))
 }
 
 func returnErr(err error, c chan types.APIEvent) {
@@ -148,6 +161,8 @@ func (s *Store) listAndWatch(apiOp *types.APIRequest, k8sClient dynamic.Resource
 			return
 		}
 		rev = list.GetResourceVersion()
+	} else if rev == "-1" {
+		rev = ""
 	}
 
 	timeout := int64(60 * 30)
@@ -190,12 +205,12 @@ func (s *Store) Watch(apiOp *types.APIRequest, schema *types.Schema, w types.Wat
 }
 
 func (s *Store) toAPIEvent(apiOp *types.APIRequest, schema *types.Schema, et watch.EventType, obj *unstructured.Unstructured) types.APIEvent {
-	name := "resource.change"
+	name := types.ChangeAPIEvent
 	switch et {
 	case watch.Deleted:
-		name = "resource.remove"
+		name = types.RemoveAPIEvent
 	case watch.Added:
-		name = "resource.create"
+		name = types.CreateAPIEvent
 	}
 
 	s.fromInternal(apiOp, schema, obj.Object)
@@ -212,9 +227,6 @@ func (s *Store) Create(apiOp *types.APIRequest, schema *types.Schema, params typ
 	if err := s.toInternal(schema.Mapper, data); err != nil {
 		return types.APIObject{}, err
 	}
-
-	values.PutValue(data, apiOp.GetUser(), "metadata", "annotations", "field.cattle.io/creatorId")
-	values.PutValue(data, "norman", "metadata", "labels", "cattle.io/creator")
 
 	name, _ := values.GetValueN(data, "metadata", "name").(string)
 	if name == "" {
@@ -258,18 +270,14 @@ func (s *Store) Update(apiOp *types.APIRequest, schema *types.Schema, params typ
 		return types.APIObject{}, err
 	}
 
-	if err := s.toInternal(schema.Mapper, data); err != nil {
-		return types.APIObject{}, err
-	}
-
 	if apiOp.Method == http.MethodPatch {
-		bytes, err := json.Marshal(data)
+		bytes, err := ioutil.ReadAll(io.LimitReader(apiOp.Request.Body, 2<<20))
 		if err != nil {
 			return types.APIObject{}, err
 		}
 
 		pType := apitypes.StrategicMergePatchType
-		if apiOp.Request.Header.Get("content-type") == "application/json-patch+json" {
+		if apiOp.Request.Header.Get("content-type") == string(apitypes.JSONPatchType) {
 			pType = apitypes.JSONPatchType
 		}
 
@@ -280,6 +288,10 @@ func (s *Store) Update(apiOp *types.APIRequest, schema *types.Schema, params typ
 
 		_, result, err = s.singleResult(apiOp, schema, resp)
 		return types.ToAPI(result), err
+	}
+
+	if err := s.toInternal(schema.Mapper, data); err != nil {
+		return types.APIObject{}, err
 	}
 
 	resourceVersion := convert.ToString(values.GetValueN(data, "metadata", "resourceVersion"))

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rancher/norman/pkg/store/empty"
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/store/empty"
+	"github.com/rancher/norman/v2/pkg/types"
 )
 
 func Register(schemas *types.Schemas, versions, roots []string) {

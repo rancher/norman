@@ -3,7 +3,7 @@ package definition
 import (
 	"strings"
 
-	"github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/convert"
 )
 
 func IsMapType(fieldType string) bool {
