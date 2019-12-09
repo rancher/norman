@@ -6,9 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/rancher/norman/pkg/types"
-
-	"github.com/rancher/norman/pkg/httperror"
+	"github.com/rancher/norman/v2/pkg/httperror"
+	"github.com/rancher/norman/v2/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 

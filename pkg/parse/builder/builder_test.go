@@ -3,7 +3,7 @@ package builder
 import (
 	"testing"
 
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,28 +17,28 @@ func TestEmptyStringWithDefault(t *testing.T) {
 			},
 		},
 	}
-	schemas := types.NewSchemas()
+	schemas := types.EmptySchemas()
 	schemas.AddSchema(*schema)
 
 	builder := NewBuilder(&types.APIRequest{})
 
 	// Test if no field we set to "foo"
-	result, err := builder.Construct(schema, nil, Create)
+	result, err := builder.Construct(schema, types.ToAPI(nil), Create)
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, ok := result["foo"]
+	value, ok := result.Map()["foo"]
 	assert.True(t, ok)
 	assert.Equal(t, "foo", value)
 
 	// Test if field is "" we set to "foo"
-	result, err = builder.Construct(schema, map[string]interface{}{
+	result, err = builder.Construct(schema, types.ToAPI(map[string]interface{}{
 		"foo": "",
-	}, Create)
+	}), Create)
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, ok = result["foo"]
+	value, ok = result.Map()["foo"]
 	assert.True(t, ok)
 	assert.Equal(t, "foo", value)
 }

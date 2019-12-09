@@ -3,14 +3,14 @@ package api
 import (
 	"net/http"
 
-	"github.com/rancher/norman/pkg/api/access"
-	"github.com/rancher/norman/pkg/api/handler"
-	"github.com/rancher/norman/pkg/api/writer"
-	"github.com/rancher/norman/pkg/authorization"
-	"github.com/rancher/norman/pkg/httperror"
-	errhandler "github.com/rancher/norman/pkg/httperror/handler"
-	"github.com/rancher/norman/pkg/parse"
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/api/access"
+	"github.com/rancher/norman/v2/pkg/api/handler"
+	"github.com/rancher/norman/v2/pkg/api/writer"
+	"github.com/rancher/norman/v2/pkg/authorization"
+	"github.com/rancher/norman/v2/pkg/httperror"
+	errhandler "github.com/rancher/norman/v2/pkg/httperror/handler"
+	"github.com/rancher/norman/v2/pkg/parse"
+	"github.com/rancher/norman/v2/pkg/types"
 	"github.com/rancher/wrangler/pkg/merr"
 )
 
@@ -229,6 +229,9 @@ func (s *Server) handleOp(apiOp *types.APIRequest) (int, interface{}, error) {
 		fallthrough
 	case List:
 		data, err := handle(apiOp, apiOp.Schema.ListHandler, s.Defaults.ListHandler)
+		if err == nil && data.IsNil() {
+			return http.StatusNotFound, data, nil
+		}
 		return http.StatusOK, data, err
 	case Update:
 		data, err := handle(apiOp, apiOp.Schema.UpdateHandler, s.Defaults.UpdateHandler)
@@ -256,10 +259,6 @@ func handle(apiOp *types.APIRequest, custom types.RequestHandler, handler types.
 		obj, err = custom(apiOp)
 	} else if handler != nil {
 		obj, err = handler(apiOp)
-	}
-
-	if err == nil && obj.IsNil() {
-		return types.APIObject{}, httperror.NewAPIError(httperror.NotFound, "")
 	}
 
 	return obj, err

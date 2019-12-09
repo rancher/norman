@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rancher/norman/pkg/types/convert"
-	"github.com/rancher/norman/pkg/types/definition"
-	"github.com/rancher/norman/pkg/types/slice"
+	"github.com/rancher/norman/v2/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/definition"
+	"github.com/rancher/norman/v2/pkg/types/slice"
 	"github.com/sirupsen/logrus"
 )
 
@@ -405,14 +405,20 @@ func applyTag(structField *reflect.StructField, field *Field) error {
 			field.Default = value
 		case "nullable":
 			field.Nullable = true
+		case "notnullable":
+			field.Nullable = false
 		case "create":
 			field.Create = true
+		case "nocreate":
+			field.Create = false
 		case "writeOnly":
 			field.WriteOnly = true
 		case "required":
 			field.Required = true
 		case "update":
 			field.Update = true
+		case "noupdate":
+			field.Update = false
 		case "minLength":
 			field.MinLength, err = toInt(value, structField)
 		case "maxLength":

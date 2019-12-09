@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/rancher/norman/pkg/auth"
+	"github.com/rancher/norman/v2/pkg/auth"
 	"github.com/urfave/cli"
 )
 

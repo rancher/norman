@@ -1,6 +1,7 @@
 package httperror
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -8,7 +9,7 @@ var (
 	Unauthorized     = ErrorCode{"Unauthorized", 401}
 	PermissionDenied = ErrorCode{"PermissionDenied", 403}
 	NotFound         = ErrorCode{"NotFound", 404}
-	MethodNotAllowed = ErrorCode{"MethodNotAllow", 405}
+	MethodNotAllowed = ErrorCode{"MethodNotAllowed", 405}
 	Conflict         = ErrorCode{"Conflict", 409}
 
 	InvalidDateFormat  = ErrorCode{"InvalidDateFormat", 422}
@@ -32,6 +33,8 @@ var (
 
 	ServerError        = ErrorCode{"ServerError", 500}
 	ClusterUnavailable = ErrorCode{"ClusterUnavailable", 503}
+
+	ErrComplete = errors.New("request completed")
 )
 
 type ErrorCode struct {

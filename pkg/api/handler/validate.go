@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"github.com/rancher/norman/pkg/httperror"
-	"github.com/rancher/norman/pkg/parse"
-	"github.com/rancher/norman/pkg/parse/builder"
-	"github.com/rancher/norman/pkg/types"
+	"github.com/rancher/norman/v2/pkg/httperror"
+	"github.com/rancher/norman/v2/pkg/parse"
+	"github.com/rancher/norman/v2/pkg/parse/builder"
+	"github.com/rancher/norman/v2/pkg/types"
 )
 
 func ParseAndValidateBody(apiOp *types.APIRequest, create bool) (types.APIObject, error) {
