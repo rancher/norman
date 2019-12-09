@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/rancher/norman/pkg/data"
-	"github.com/rancher/norman/pkg/parse"
-	"github.com/rancher/norman/pkg/parse/builder"
-	"github.com/rancher/norman/pkg/types"
-	"github.com/rancher/norman/pkg/types/convert"
-	"github.com/rancher/norman/pkg/types/definition"
+	"github.com/rancher/norman/v2/pkg/data"
+	"github.com/rancher/norman/v2/pkg/parse"
+	"github.com/rancher/norman/v2/pkg/parse/builder"
+	"github.com/rancher/norman/v2/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/definition"
 	"github.com/sirupsen/logrus"
 )
 
@@ -157,11 +157,11 @@ func (j *EncodingResponseWriter) convert(b builder.Builder, context *types.APIRe
 		ActionLinks: context.Request.Header.Get("X-API-Action-Links") != "",
 	}
 
+	j.addLinks(b, schema, context, input, rawResource)
+
 	if schema.Formatter != nil {
 		schema.Formatter(context, rawResource)
 	}
-
-	j.addLinks(b, schema, context, input, rawResource)
 
 	return rawResource
 }

@@ -1,7 +1,7 @@
 package values
 
 import (
-	convert2 "github.com/rancher/norman/pkg/types/convert"
+	convert2 "github.com/rancher/norman/v2/pkg/types/convert"
 )
 
 func RemoveValue(data map[string]interface{}, keys ...string) (interface{}, bool) {

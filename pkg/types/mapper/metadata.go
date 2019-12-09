@@ -1,6 +1,6 @@
 package mapper
 
-import "github.com/rancher/norman/pkg/types"
+import "github.com/rancher/norman/v2/pkg/types"
 
 func NewMetadataMapper() types.Mapper {
 	return types.Mappers{

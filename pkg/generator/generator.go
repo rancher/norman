@@ -10,8 +10,8 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-	"github.com/rancher/norman/pkg/types"
-	"github.com/rancher/norman/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types/convert"
 	"k8s.io/gengo/args"
 	"k8s.io/gengo/examples/deepcopy-gen/generators"
 	"k8s.io/gengo/generator"

@@ -1,9 +1,9 @@
 package types
 
 import (
-	"github.com/rancher/norman/pkg/data"
-	"github.com/rancher/norman/pkg/types/convert"
-	"github.com/rancher/norman/pkg/types/definition"
+	"github.com/rancher/norman/v2/pkg/data"
+	"github.com/rancher/norman/v2/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/definition"
 )
 
 type Mapper interface {

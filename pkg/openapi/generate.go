@@ -3,10 +3,21 @@ package openapi
 import (
 	"fmt"
 
-	"github.com/rancher/norman/pkg/types"
-	"github.com/rancher/norman/pkg/types/definition"
+	"github.com/rancher/norman/v2/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types/definition"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
+
+func MustGenerate(obj interface{}) *v1beta1.JSONSchemaProps {
+	if obj == nil {
+		return nil
+	}
+	result, err := ToOpenAPIFromStruct(obj)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
 
 func ToOpenAPIFromStruct(obj interface{}) (*v1beta1.JSONSchemaProps, error) {
 	schemas := types.EmptySchemas()
@@ -177,10 +188,24 @@ func typeAndSchema(typeName string, schemas *types.Schemas) (string, *types.Sche
 		return "string", nil, nil
 	case "date":
 		return "string", nil, nil
+	case "enum":
+		return "string", nil, nil
+	case "password":
+		return "string", nil, nil
+	case "hostname":
+		return "string", nil, nil
 	case "boolean":
 		return "boolean", nil, nil
 	case "json":
 		return "object", nil, nil
+	}
+
+	if definition.IsReferenceType(typeName) {
+		return "string", nil, nil
+	}
+
+	if definition.IsArrayType(typeName) {
+		return "array", nil, nil
 	}
 
 	schema := schemas.Schema(typeName)

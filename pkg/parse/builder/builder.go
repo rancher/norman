@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rancher/norman/pkg/httperror"
-	"github.com/rancher/norman/pkg/types"
-	"github.com/rancher/norman/pkg/types/convert"
-	"github.com/rancher/norman/pkg/types/definition"
+	"github.com/rancher/norman/v2/pkg/httperror"
+	"github.com/rancher/norman/v2/pkg/types"
+	"github.com/rancher/norman/v2/pkg/types/convert"
+	"github.com/rancher/norman/v2/pkg/types/definition"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -40,7 +40,7 @@ type builder struct {
 	yaml         bool
 }
 
-func NewBuilder(apiOp *types.APIRequest) *builder {
+func NewBuilder(apiOp *types.APIRequest) Builder {
 	return &builder{
 		apiOp:        apiOp,
 		yaml:         apiOp.ResponseFormat == "yaml",

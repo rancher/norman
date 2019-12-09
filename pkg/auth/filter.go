@@ -19,6 +19,12 @@ type Authenticator interface {
 	Authenticate(req *http.Request) (user.Info, bool, error)
 }
 
+type AuthenticatorFunc func(req *http.Request) (user.Info, bool, error)
+
+func (a AuthenticatorFunc) Authenticate(req *http.Request) (user.Info, bool, error) {
+	return a(req)
+}
+
 type Middleware func(http.ResponseWriter, *http.Request, http.Handler)
 
 func (m Middleware) Wrap(handler http.Handler) http.Handler {
