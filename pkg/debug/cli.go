@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	cliv2 "github.com/urfave/cli/v2"
 	"k8s.io/klog"
 )
 
@@ -49,6 +50,20 @@ func Flags(config *Config) []cli.Flag {
 			Destination: &config.Debug,
 		},
 		cli.IntFlag{
+			Name:        "debug-level",
+			Value:       7,
+			Destination: &config.DebugLevel,
+		},
+	}
+}
+
+func FlagsV2(config *Config) []cliv2.Flag {
+	return []cliv2.Flag{
+		&cliv2.BoolFlag{
+			Name:        "debug",
+			Destination: &config.Debug,
+		},
+		&cliv2.IntFlag{
 			Name:        "debug-level",
 			Value:       7,
 			Destination: &config.DebugLevel,
