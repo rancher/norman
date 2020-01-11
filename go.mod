@@ -11,6 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.3.0
 	github.com/urfave/cli v1.22.1
+	github.com/urfave/cli/v2 v2.1.1
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	k8s.io/apiextensions-apiserver v0.0.0-20190918201827-3de75813f604
 	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
