@@ -14,11 +14,11 @@ require (
 	github.com/maruel/ut v1.0.0 // indirect
 	github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/client_golang v1.4.0
 	github.com/rancher/wrangler v0.4.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	google.golang.org/appengine v1.6.1 // indirect
 	k8s.io/api v0.17.0
