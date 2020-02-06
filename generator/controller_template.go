@@ -4,6 +4,7 @@ var controllerTemplate = `package {{.schema.Version.Version}}
 
 import (
 	"context"
+	"time"
 
 	{{.importPackage}}
 	"github.com/rancher/norman/objectclient"
@@ -78,6 +79,7 @@ type {{.schema.CodeName}}Controller interface {
 	AddClusterScopedHandler(ctx context.Context, name, clusterName string, handler {{.schema.CodeName}}HandlerFunc)
 	AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, clusterName string, handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
+	EnqueueAfter(namespace, name string, after time.Duration)
 	Sync(ctx context.Context) error
 	Start(ctx context.Context, threadiness int) error
 }
