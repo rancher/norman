@@ -38,6 +38,7 @@ type {{.schema.CodeName}}Client struct {
 
 type {{.schema.CodeName}}Operations interface {
     List(opts *types.ListOpts) (*{{.schema.CodeName}}Collection, error)
+    ListAll(opts *types.ListOpts) (*{{.schema.CodeName}}Collection, error)
     Create(opts *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
     Update(existing *{{.schema.CodeName}}, updates interface{}) (*{{.schema.CodeName}}, error)
     Replace(existing *{{.schema.CodeName}}) (*{{.schema.CodeName}}, error)
@@ -95,6 +96,23 @@ func (c *{{.schema.CodeName}}Client) List(opts *types.ListOpts) (*{{.schema.Code
     resp := &{{.schema.CodeName}}Collection{}
     err := c.apiClient.Ops.DoList({{.schema.CodeName}}Type, opts, resp)
     resp.client = c
+    return resp, err
+}
+
+func (c *{{.schema.CodeName}}Client) ListAll(opts *types.ListOpts) (*{{.schema.CodeName}}Collection, error) {
+    resp := &{{.schema.CodeName}}Collection{}
+    resp, err := c.List(opts)
+    if err != nil {
+        return resp, err
+    }
+    data := resp.Data
+    for resp, err = resp.Next(); resp != nil && err == nil; resp, err = resp.Next() {
+        data = append(data, resp.Data...)
+    }
+    if err != nil {
+        return resp, err
+    }
+    resp.Data = data
     return resp, err
 }
 
