@@ -3,46 +3,70 @@ package controller
 import (
 	"reflect"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
+type ObjectClusterName interface {
+	ClusterName() string
+}
+
 func ObjectInCluster(cluster string, obj interface{}) bool {
-	var clusterName string
-	if c := getValue(obj, "ClusterName"); c.IsValid() {
-		clusterName = c.String()
+	if o, ok := obj.(ObjectClusterName); ok {
+		return o.ClusterName() == cluster
 	}
-	if clusterName == "" {
-		if c := getValue(obj, "Spec", "ClusterName"); c.IsValid() {
-			clusterName = c.String()
+
+	logrus.Warnf("ObjectClusterName not implemented by type %T", obj)
+
+	var clusterName string
+
+	if v, ok := obj.(map[string]interface{}); ok {
+		if name, ok := v["ClusterName"]; ok {
+			clusterName = name.(string)
 		}
 
-	}
-	if clusterName == "" {
-		if c := getValue(obj, "ProjectName"); c.IsValid() {
-			if parts := strings.SplitN(c.String(), ":", 2); len(parts) == 2 {
-				clusterName = parts[0]
-			}
-		}
-	}
-	if clusterName == "" {
-		if c := getValue(obj, "Spec", "ProjectName"); c.IsValid() {
-			if parts := strings.SplitN(c.String(), ":", 2); len(parts) == 2 {
-				clusterName = parts[0]
-			}
-		}
-	}
-	if clusterName == "" {
-		if a := getValue(obj, "Annotations"); a.IsValid() {
-			if c := a.MapIndex(reflect.ValueOf("field.cattle.io/projectId")); c.IsValid() {
-				if parts := strings.SplitN(c.String(), ":", 2); len(parts) == 2 {
+		if clusterName == "" {
+			if c, ok := v["ProjectName"]; ok {
+				if parts := strings.SplitN(c.(string), ":", 2); len(parts) == 2 {
 					clusterName = parts[0]
 				}
 			}
 		}
-	}
-	if clusterName == "" {
-		if c := getValue(obj, "Namespace"); c.IsValid() {
-			clusterName = c.String()
+
+		if clusterName == "" {
+			if s, ok := v["Spec"].(map[string]interface{}); ok {
+				if name, ok := s["ClusterName"]; ok {
+					clusterName = name.(string)
+				}
+			}
 		}
+
+		if clusterName == "" {
+			if s, ok := v["Spec"].(map[string]interface{}); ok {
+				if name, ok := s["ProjectName"]; ok {
+					if parts := strings.SplitN(name.(string), ":", 2); len(parts) == 2 {
+						clusterName = parts[0]
+					}
+				}
+			}
+		}
+
+		if clusterName == "" {
+			if annos, ok := v["Annotations"].(map[string]interface{}); ok {
+				if projectID, ok := annos["field.cattle.io/projectId"]; ok {
+					if parts := strings.SplitN(projectID.(string), ":", 2); len(parts) == 2 {
+						clusterName = parts[0]
+					}
+				}
+			}
+		}
+
+		if clusterName == "" {
+			if namespace, ok := v["Namespace"]; ok {
+				clusterName = namespace.(string)
+			}
+		}
+
 	}
 
 	return clusterName == cluster
