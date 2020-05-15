@@ -90,6 +90,7 @@ type {{.schema.CodeName}}Interface interface {
 	GetNamespaced(namespace, name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Update(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
+	UpdateStatus(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteNamespaced(namespace, name string, options *metav1.DeleteOptions) error
 	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
@@ -266,6 +267,11 @@ func (s *{{.schema.ID}}Client) GetNamespaced(namespace, name string, opts metav1
 
 func (s *{{.schema.ID}}Client) Update(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
 	obj, err := s.objectClient.Update(o.Name, o)
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
+}
+
+func (s *{{.schema.ID}}Client) UpdateStatus(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	obj, err := s.objectClient.UpdateStatus(o.Name, o)
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
 

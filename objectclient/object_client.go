@@ -192,6 +192,28 @@ func (p *ObjectClient) Update(name string, o runtime.Object) (runtime.Object, er
 	return result, err
 }
 
+func (p *ObjectClient) UpdateStatus(name string, o runtime.Object) (runtime.Object, error) {
+	ns := p.ns
+	if obj, ok := o.(metav1.Object); ok && obj.GetNamespace() != "" {
+		ns = obj.GetNamespace()
+	}
+	result := p.Factory.Object()
+	if len(name) == 0 {
+		return result, errors.New("object missing name")
+	}
+	logrus.Debugf("REST UPDATE STATUS %s/%s/%s/%s/%s/%s", p.getAPIPrefix(), p.gvk.Group, p.gvk.Version, ns, p.resource.Name, name)
+	err := p.restClient.Put().
+		Prefix(p.getAPIPrefix(), p.gvk.Group, p.gvk.Version).
+		NamespaceIfScoped(ns, p.resource.Namespaced).
+		Resource(p.resource.Name).
+		Name(name).
+		SubResource("status").
+		Body(o).
+		Do(context.TODO()).
+		Into(result)
+	return result, err
+}
+
 func (p *ObjectClient) DeleteNamespaced(namespace, name string, opts *metav1.DeleteOptions) error {
 	req := p.restClient.Delete().
 		Prefix(p.getAPIPrefix(), p.gvk.Group, p.gvk.Version)
