@@ -6,60 +6,42 @@ import (
 	"sync"
 	"context"
 
+	"github.com/rancher/lasso/pkg/client"
+	"github.com/rancher/lasso/pkg/controller"
 	"github.com/rancher/norman/objectclient"
-	"github.com/rancher/norman/objectclient/dynamic"
-	"github.com/rancher/norman/controller"
-	"github.com/rancher/norman/restwatch"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 )
 
-type (
-	contextKeyType struct{}
-	contextClientsKeyType struct{}
-)
-
 type Interface interface {
-	RESTClient() rest.Interface
-	controller.Starter
 	{{range .schemas}}
 	{{.CodeNamePlural}}Getter{{end}}
 }
 
 type Client struct {
-	sync.Mutex
-	restClient         rest.Interface
-	starters           []controller.Starter
-	{{range .schemas}}
-	{{.ID}}Controllers map[string]{{.CodeName}}Controller{{end}}
+	controllerFactory controller.SharedControllerFactory
+	clientFactory     client.SharedClientFactory
 }
 
-func NewForConfig(config rest.Config) (Interface, error) {
-	if config.NegotiatedSerializer == nil {
-		config.NegotiatedSerializer = dynamic.NegotiatedSerializer
+{{ if not .external }}
+func NewForConfig(cfg rest.Config) (Interface, error) {
+	scheme := runtime.NewScheme()
+	if err := AddToScheme(scheme); err != nil {
+		return nil, err
 	}
-
-	restClient, err := restwatch.UnversionedRESTClientFor(&config)
+	controllerFactory, err := controller.NewSharedControllerFactoryFromConfig(&cfg, scheme)
 	if err != nil {
 		return nil, err
 	}
+	return NewFromControllerFactory(controllerFactory)
+}
+{{ end }}
 
+func NewFromControllerFactory(factory controller.SharedControllerFactory) (Interface, error) {
 	return &Client{
-		restClient:         restClient,
-	{{range .schemas}}
-		{{.ID}}Controllers: map[string]{{.CodeName}}Controller{},{{end}}
+		controllerFactory: factory,
+		clientFactory:     factory.SharedCacheFactory().SharedClientFactory(),
 	}, nil
-}
-
-func (c *Client) RESTClient() rest.Interface {
-	return c.restClient
-}
-
-func (c *Client) Sync(ctx context.Context) error {
-	return controller.Sync(ctx, c.starters...)
-}
-
-func (c *Client) Start(ctx context.Context, threadiness int) error {
-	return controller.Start(ctx, threadiness, c.starters...)
 }
 
 {{range .schemas}}
@@ -68,7 +50,8 @@ type {{.CodeNamePlural}}Getter interface {
 }
 
 func (c *Client) {{.CodeNamePlural}}(namespace string) {{.CodeName}}Interface {
-	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &{{.CodeName}}Resource, {{.CodeName}}GroupVersionKind, {{.ID}}Factory{})
+	sharedClient := c.clientFactory.ForResourceKind({{.CodeName}}GroupVersionResource, {{.CodeName}}GroupVersionKind.Kind, {{ . | namespaced }})
+	objectClient := objectclient.NewObjectClient(namespace, sharedClient, &{{.CodeName}}Resource, {{.CodeName}}GroupVersionKind, {{.ID}}Factory{})
 	return &{{.ID}}Client{
 		ns:           namespace,
 		client:       c,

@@ -251,20 +251,21 @@ func generateScheme(external bool, outputDir string, version *types.APIVersion, 
 	for _, schema := range schemas {
 		if !external {
 			names = append(names, schema.CodeName)
-		}
-		if schema.CanList(nil) == nil {
+			names = append(names, schema.CodeName+"List")
+		} else if schema.CanList(nil) == nil {
 			names = append(names, schema.CodeName+"List")
 		}
 	}
 
 	return typeTemplate.Execute(output, map[string]interface{}{
-		"version": version,
-		"schemas": schemas,
-		"names":   names,
+		"external": external,
+		"version":  version,
+		"schemas":  schemas,
+		"names":    names,
 	})
 }
 
-func generateK8sClient(outputDir string, version *types.APIVersion, schemas []*types.Schema) error {
+func generateK8sClient(external bool, outputDir string, version *types.APIVersion, schemas []*types.Schema) error {
 	filePath := strings.ToLower("zz_generated_k8s_client.go")
 	output, err := os.Create(path.Join(outputDir, filePath))
 	if err != nil {
@@ -280,8 +281,9 @@ func generateK8sClient(outputDir string, version *types.APIVersion, schemas []*t
 	}
 
 	return typeTemplate.Execute(output, map[string]interface{}{
-		"version": version,
-		"schemas": schemas,
+		"external": external,
+		"version":  version,
+		"schemas":  schemas,
 	})
 }
 
@@ -350,11 +352,7 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 		}
 	}
 
-	if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
-		return err
-	}
-
-	if err := generateK8sClient(k8sDir, version, controllers); err != nil {
+	if err := generateK8sClient(true, k8sDir, version, controllers); err != nil {
 		return err
 	}
 
@@ -429,7 +427,7 @@ func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutput
 			return err
 		}
 
-		if err := generateK8sClient(k8sDir, &controllers[0].Version, controllers); err != nil {
+		if err := generateK8sClient(false, k8sDir, &controllers[0].Version, controllers); err != nil {
 			return err
 		}
 
@@ -481,6 +479,7 @@ func prepareDirs(dirs ...string) error {
 
 func gofmt(workDir, pkg string) error {
 	cmd := exec.Command("goimports", "-w", "-l", "./"+pkg)
+	fmt.Println(cmd.Args)
 	cmd.Dir = workDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

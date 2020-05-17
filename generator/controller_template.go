@@ -28,7 +28,7 @@ var (
 	}
 	{{.schema.CodeName}}Resource = metav1.APIResource{
 		Name:         "{{.schema.PluralName | toLower}}",
-		SingularName: "{{.schema.ID | toLower}}",
+		SingularName: "{{.schema.CodeName | toLower}}",
 {{- if eq .schema.Scope "namespace" }}
 		Namespaced:   true,
 {{ else }}
@@ -55,11 +55,13 @@ func New{{.schema.CodeName}}(namespace, name string, obj {{.prefix}}{{.schema.Co
 	return &obj
 }
 
+{{ if eq .prefix "" }}
 type {{.schema.CodeName}}List struct {
 	metav1.TypeMeta   %BACK%json:",inline"%BACK%
 	metav1.ListMeta   %BACK%json:"metadata,omitempty"%BACK%
 	Items             []{{.prefix}}{{.schema.CodeName}} %BACK%json:"items"%BACK%
 }
+{{- end }}
 
 type {{.schema.CodeName}}HandlerFunc func(key string, obj *{{.prefix}}{{.schema.CodeName}}) (runtime.Object, error)
 
@@ -80,8 +82,6 @@ type {{.schema.CodeName}}Controller interface {
 	AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, clusterName string, handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
 	EnqueueAfter(namespace, name string, after time.Duration)
-	Sync(ctx context.Context) error
-	Start(ctx context.Context, threadiness int) error
 }
 
 type {{.schema.CodeName}}Interface interface {
@@ -92,8 +92,8 @@ type {{.schema.CodeName}}Interface interface {
 	Update(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteNamespaced(namespace, name string, options *metav1.DeleteOptions) error
-	List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
-	ListNamespaced(namespace string, opts metav1.ListOptions) (*{{.schema.CodeName}}List, error)
+	List(opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error)
+	ListNamespaced(namespace string, opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() {{.schema.CodeName}}Controller
@@ -132,7 +132,7 @@ func (l *{{.schema.ID}}Lister) Get(namespace, name string) (*{{.prefix}}{{.schem
 	if !exists {
 		return nil, errors.NewNotFound(schema.GroupResource{
 			Group: {{.schema.CodeName}}GroupVersionKind.Group,
-			Resource: "{{.schema.ID}}",
+			Resource: {{.schema.CodeName}}GroupVersionResource.Resource,
 		}, key)
 	}
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), nil
@@ -213,29 +213,16 @@ func (c {{.schema.ID}}Factory) Object() runtime.Object {
 }
 
 func (c {{.schema.ID}}Factory) List() runtime.Object {
-	return &{{.schema.CodeName}}List{}
+	return &{{.prefix}}{{.schema.CodeName}}List{}
 }
 
 func (s *{{.schema.ID}}Client) Controller() {{.schema.CodeName}}Controller {
-	s.client.Lock()
-	defer s.client.Unlock()
-
-	c, ok := s.client.{{.schema.ID}}Controllers[s.ns]
-	if ok {
-		return c
-	}
-
 	genericController := controller.NewGenericController({{.schema.CodeName}}GroupVersionKind.Kind+"Controller",
-		s.objectClient)
+		s.client.controllerFactory.ForResourceKind({{.schema.CodeName}}GroupVersionResource, {{.schema.CodeName}}GroupVersionKind.Kind, {{.schema | namespaced}}))
 
-	c = &{{.schema.ID}}Controller{
+	return &{{.schema.ID}}Controller{
 		GenericController: genericController,
 	}
-
-	s.client.{{.schema.ID}}Controllers[s.ns] = c
-    s.client.starters = append(s.client.starters, c)
-
-	return c
 }
 
 type {{.schema.ID}}Client struct {
@@ -269,6 +256,11 @@ func (s *{{.schema.ID}}Client) Update(o *{{.prefix}}{{.schema.CodeName}}) (*{{.p
 	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
 }
 
+func (s *{{.schema.ID}}Client) UpdateStatus(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
+	obj, err := s.objectClient.UpdateStatus(o.Name, o)
+	return obj.(*{{.prefix}}{{.schema.CodeName}}), err
+}
+
 func (s *{{.schema.ID}}Client) Delete(name string, options *metav1.DeleteOptions) error {
 	return s.objectClient.Delete(name, options)
 }
@@ -277,14 +269,14 @@ func (s *{{.schema.ID}}Client) DeleteNamespaced(namespace, name string, options 
 	return s.objectClient.DeleteNamespaced(namespace, name, options)
 }
 
-func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
+func (s *{{.schema.ID}}Client) List(opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error) {
 	obj, err := s.objectClient.List(opts)
-	return obj.(*{{.schema.CodeName}}List), err
+	return obj.(*{{.prefix}}{{.schema.CodeName}}List), err
 }
 
-func (s *{{.schema.ID}}Client) ListNamespaced(namespace string, opts metav1.ListOptions) (*{{.schema.CodeName}}List, error) {
+func (s *{{.schema.ID}}Client) ListNamespaced(namespace string, opts metav1.ListOptions) (*{{.prefix}}{{.schema.CodeName}}List, error) {
 	obj, err := s.objectClient.ListNamespaced(namespace, opts)
-	return obj.(*{{.schema.CodeName}}List), err
+	return obj.(*{{.prefix}}{{.schema.CodeName}}List), err
 }
 
 func (s *{{.schema.ID}}Client) Watch(opts metav1.ListOptions) (watch.Interface, error) {

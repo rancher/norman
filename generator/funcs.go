@@ -18,6 +18,7 @@ func funcs() template.FuncMap {
 		"hasGet":              hasGet,
 		"hasPost":             hasPost,
 		"getCollectionOutput": getCollectionOutput,
+		"namespaced":          namespaced,
 	}
 }
 
@@ -27,6 +28,10 @@ func addUnderscore(input string) string {
 
 func hasGet(schema *types.Schema) bool {
 	return contains(schema.CollectionMethods, http.MethodGet)
+}
+
+func namespaced(schema *types.Schema) bool {
+	return schema.Scope == types.NamespaceScope
 }
 
 func hasPost(schema *types.Schema) bool {
