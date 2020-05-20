@@ -15,15 +15,15 @@ require (
 	github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.4.0
-	github.com/rancher/wrangler v0.4.1
+	github.com/rancher/wrangler v0.5.4-0.20200520040055-b8d49179cfc8
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	google.golang.org/appengine v1.6.1 // indirect
-	k8s.io/api v0.17.0
-	k8s.io/apiextensions-apiserver v0.17.0
-	k8s.io/apimachinery v0.17.0
-	k8s.io/client-go v0.17.0
-	k8s.io/gengo v0.0.0-20191120174120-e74f70b9b27e
+	k8s.io/api v0.18.0
+	k8s.io/apiextensions-apiserver v0.18.0
+	k8s.io/apimachinery v0.18.0
+	k8s.io/client-go v0.18.0
+	k8s.io/gengo v0.0.0-20200114144118-36b2048a9120
 )
