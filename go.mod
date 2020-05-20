@@ -15,7 +15,7 @@ require (
 	github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.4.0
-	github.com/rancher/wrangler v0.5.4-0.20200326191509-4054411d9736
+	github.com/rancher/wrangler v0.5.4-0.20200520040055-b8d49179cfc8
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
