@@ -289,11 +289,22 @@ func (s *Store) realWatch(apiContext *types.APIContext, schema *types.Schema, op
 	}
 
 	timeout := int64(60 * 30)
+
+	// first get current version as we don't want to stream the past events
 	req := s.common(namespace, k8sClient.Get())
+	req.VersionedParams(&metav1.ListOptions{
+		Limit: 1,
+	}, metav1.ParameterCodec)
+	resultList := &unstructured.UnstructuredList{}
+	if err = req.Do(apiContext.Request.Context()).Into(resultList); err != nil {
+		return nil, err
+	}
+
+	req = s.common(namespace, k8sClient.Get())
 	req.VersionedParams(&metav1.ListOptions{
 		Watch:           true,
 		TimeoutSeconds:  &timeout,
-		ResourceVersion: "0",
+		ResourceVersion: resultList.GetResourceVersion(),
 	}, metav1.ParameterCodec)
 
 	body, err := req.Stream(apiContext.Request.Context())
