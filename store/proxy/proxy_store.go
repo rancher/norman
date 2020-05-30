@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	ejson "encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -20,6 +21,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	restclientwatch "k8s.io/client-go/rest/watch"
+	"k8s.io/client-go/tools/pager"
 )
 
 var (
@@ -247,10 +250,16 @@ func (s *Store) retryList(namespace string, apiContext *types.APIContext) (*unst
 	}
 
 	for i := 0; i < 3; i++ {
-		req := s.common(namespace, k8sClient.Get())
-		start := time.Now()
 		resultList = &unstructured.UnstructuredList{}
-		err = req.Do(apiContext.Request.Context()).Into(resultList)
+		pager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+			subList := &unstructured.UnstructuredList{}
+			req := s.common(namespace, k8sClient.Get())
+			req.VersionedParams(&opts, metav1.ParameterCodec)
+			return subList, req.Do(apiContext.Request.Context()).Into(subList)
+		})
+		pager.PageSize = 1000
+		start := time.Now()
+		resp, _, err := pager.List(apiContext.Request.Context(), metav1.ListOptions{})
 		logrus.Tracef("LIST: %v, %v", time.Now().Sub(start), s.resourcePlural)
 		if err != nil {
 			if i < 2 && strings.Contains(err.Error(), "Client.Timeout exceeded") {
@@ -259,6 +268,14 @@ func (s *Store) retryList(namespace string, apiContext *types.APIContext) (*unst
 			}
 			return resultList, err
 		}
+		err = meta.EachListItem(resp, func(item runtime.Object) error {
+			if ustr, ok := item.(*unstructured.Unstructured); ok {
+				resultList.Items = append(resultList.Items, *ustr)
+			} else {
+				return fmt.Errorf("invalid object type in list %T", item)
+			}
+			return nil
+		})
 		return resultList, err
 	}
 	return resultList, err
@@ -289,11 +306,22 @@ func (s *Store) realWatch(apiContext *types.APIContext, schema *types.Schema, op
 	}
 
 	timeout := int64(60 * 30)
+
+	// first get current version as we don't want to stream the past events
 	req := s.common(namespace, k8sClient.Get())
+	req.VersionedParams(&metav1.ListOptions{
+		Limit: 1,
+	}, metav1.ParameterCodec)
+	resultList := &unstructured.UnstructuredList{}
+	if err = req.Do(apiContext.Request.Context()).Into(resultList); err != nil {
+		return nil, err
+	}
+
+	req = s.common(namespace, k8sClient.Get())
 	req.VersionedParams(&metav1.ListOptions{
 		Watch:           true,
 		TimeoutSeconds:  &timeout,
-		ResourceVersion: "0",
+		ResourceVersion: resultList.GetResourceVersion(),
 	}, metav1.ParameterCodec)
 
 	body, err := req.Stream(apiContext.Request.Context())
