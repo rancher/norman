@@ -478,7 +478,7 @@ func prepareDirs(dirs ...string) error {
 }
 
 func gofmt(workDir, pkg string) error {
-	cmd := exec.Command("goimports", "-w", "-l", "./"+pkg)
+	cmd := exec.Command("goimports", "-w", pkg)
 	fmt.Println(cmd.Args)
 	cmd.Dir = workDir
 	cmd.Stdout = os.Stdout
