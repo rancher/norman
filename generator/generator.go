@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -367,10 +368,10 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 	return gofmt(baseDir, k8sOutputPackage)
 }
 
-func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutputPackage, k8sOutputPackage string) error {
+func Generate(schemas *types.Schemas, privateTypes map[string]bool, basePackage, outputDir, cattleOutputPackage, k8sOutputPackage string) error {
 	baseDir := args.DefaultSourceTree()
-	cattleDir := path.Join(baseDir, cattleOutputPackage)
-	k8sDir := path.Join(baseDir, k8sOutputPackage)
+	cattleDir := path.Join(outputDir, cattleOutputPackage)
+	k8sDir := path.Join(outputDir, k8sOutputPackage)
 
 	if cattleOutputPackage == "" {
 		cattleDir = ""
@@ -400,8 +401,7 @@ func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutput
 
 		if privateType ||
 			(contains(schema.CollectionMethods, http.MethodGet) &&
-				!strings.HasPrefix(schema.PkgName, "k8s.io") &&
-				!strings.Contains(schema.PkgName, "/vendor/")) {
+				strings.HasPrefix(schema.PkgName, basePackage)) {
 			controllers = append(controllers, schema)
 			if err := generateController(false, k8sDir, schema, schemas); err != nil {
 				return err
@@ -423,7 +423,7 @@ func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutput
 	}
 
 	if len(controllers) > 0 {
-		if err := deepCopyGen(baseDir, k8sOutputPackage); err != nil {
+		if err := deepCopyGen(baseDir, filepath.Join(basePackage, k8sOutputPackage), filepath.Join(outputDir, k8sOutputPackage)); err != nil {
 			return err
 		}
 
@@ -439,12 +439,12 @@ func Generate(schemas *types.Schemas, privateTypes map[string]bool, cattleOutput
 		}
 	}
 
-	if err := gofmt(baseDir, k8sOutputPackage); err != nil {
+	if err := gofmt(baseDir, filepath.Join(outputDir, k8sOutputPackage)); err != nil {
 		return err
 	}
 
 	if cattleOutputPackage != "" {
-		return gofmt(baseDir, cattleOutputPackage)
+		return gofmt(baseDir, filepath.Join(outputDir, cattleOutputPackage))
 	}
 
 	return nil
@@ -487,7 +487,7 @@ func gofmt(workDir, pkg string) error {
 	return cmd.Run()
 }
 
-func deepCopyGen(workDir, pkg string) error {
+func deepCopyGen(workDir, pkg, pkgPath string) error {
 	arguments := &args.GeneratorArgs{
 		InputDirs:          []string{pkg},
 		OutputBase:         workDir,
@@ -505,7 +505,7 @@ func deepCopyGen(workDir, pkg string) error {
 			return generator.Packages{
 				&generator.DefaultPackage{
 					PackageName: packageParts[len(packageParts)-1],
-					PackagePath: pkg,
+					PackagePath: pkgPath,
 					HeaderText:  []byte{},
 					GeneratorFunc: func(c *generator.Context) []generator.Generator {
 						return []generator.Generator{
