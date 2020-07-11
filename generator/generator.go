@@ -545,7 +545,11 @@ func isObjectOrList(t *gengotypes.Type) bool {
 }
 
 func generateFakes(k8sDir string, controllers []*types.Schema) error {
-	m, err := moq.New(k8sDir, "fakes")
+	m, err := moq.New(moq.Config{
+		SrcDir:    k8sDir,
+		PkgName:   "fakes",
+		Formatter: "goimports",
+	})
 	if err != nil {
 		return err
 	}
