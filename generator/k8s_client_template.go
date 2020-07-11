@@ -3,9 +3,6 @@ package generator
 var k8sClientTemplate = `package {{.version.Version}}
 
 import (
-	"sync"
-	"context"
-
 	"github.com/rancher/lasso/pkg/client"
 	"github.com/rancher/lasso/pkg/controller"
 	"github.com/rancher/norman/objectclient"

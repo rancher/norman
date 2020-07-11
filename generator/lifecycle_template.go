@@ -5,7 +5,6 @@ var lifecycleTemplate = `package {{.schema.Version.Version}}
 import (
 	{{.importPackage}}
 	"k8s.io/apimachinery/pkg/runtime"
-	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/lifecycle"
 	"github.com/rancher/norman/resource"
 )
