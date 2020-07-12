@@ -4,60 +4,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"go/format"
+	"go/build"
 	"go/types"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"golang.org/x/tools/go/packages"
 )
-
-// This list comes from the golint codebase. Golint will complain about any of
-// these being mixed-case, like "Id" instead of "ID".
-var golintInitialisms = []string{
-	"ACL",
-	"API",
-	"ASCII",
-	"CPU",
-	"CSS",
-	"DNS",
-	"EOF",
-	"GUID",
-	"HTML",
-	"HTTP",
-	"HTTPS",
-	"ID",
-	"IP",
-	"JSON",
-	"LHS",
-	"QPS",
-	"RAM",
-	"RHS",
-	"RPC",
-	"SLA",
-	"SMTP",
-	"SQL",
-	"SSH",
-	"TCP",
-	"TLS",
-	"TTL",
-	"UDP",
-	"UI",
-	"UID",
-	"UUID",
-	"URI",
-	"URL",
-	"UTF8",
-	"VM",
-	"XML",
-	"XMPP",
-	"XSRF",
-	"XSS",
-}
 
 // Mocker can generate mock structs.
 type Mocker struct {
@@ -65,51 +23,84 @@ type Mocker struct {
 	tmpl    *template.Template
 	pkgName string
 	pkgPath string
-	// importByPath of the format key:path value:alias
-	importByPath map[string]string
-	// importByAlias of the format key:alias value:path
-	importByAlias map[string]string
+	fmter   func(src []byte) ([]byte, error)
+
+	imports map[string]bool
+}
+
+// Config specifies details about how interfaces should be mocked.
+// SrcDir is the only field which needs be specified.
+type Config struct {
+	SrcDir    string
+	PkgName   string
+	Formatter string
 }
 
 // New makes a new Mocker for the specified package directory.
-func New(src, packageName string) (*Mocker, error) {
-	srcPkg, err := pkgInfoFromPath(src, packages.LoadSyntax)
+func New(conf Config) (*Mocker, error) {
+	srcPkg, err := pkgInfoFromPath(conf.SrcDir, packages.NeedName|packages.NeedTypes|packages.NeedTypesInfo)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't load source package: %s", err)
+		return nil, fmt.Errorf("couldn't load source package: %s", err)
 	}
-	pkgPath := srcPkg.PkgPath
 
-	if len(packageName) == 0 {
-		packageName = srcPkg.Name
-	} else {
-		mockPkgPath := filepath.Join(src, packageName)
-		if _, err := os.Stat(mockPkgPath); os.IsNotExist(err) {
-			os.Mkdir(mockPkgPath, os.ModePerm)
-		}
-		mockPkg, err := pkgInfoFromPath(mockPkgPath, packages.LoadFiles)
-		if err != nil {
-			return nil, fmt.Errorf("Couldn't load mock package: %s", err)
-		}
-		pkgPath = mockPkg.PkgPath
+	pkgName := conf.PkgName
+	if pkgName == "" {
+		pkgName = srcPkg.Name
+	}
+
+	pkgPath, err := findPkgPath(conf.PkgName, srcPkg)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't load mock package: %s", err)
 	}
 
 	tmpl, err := template.New("moq").Funcs(templateFuncs).Parse(moqTemplate)
 	if err != nil {
 		return nil, err
 	}
+
+	fmter := gofmt
+	if conf.Formatter == "goimports" {
+		fmter = goimports
+	}
+
 	return &Mocker{
-		tmpl:          tmpl,
-		srcPkg:        srcPkg,
-		pkgName:       packageName,
-		pkgPath:       pkgPath,
-		importByPath:  make(map[string]string),
-		importByAlias: make(map[string]string),
+		tmpl:    tmpl,
+		srcPkg:  srcPkg,
+		pkgName: pkgName,
+		pkgPath: pkgPath,
+		fmter:   fmter,
+		imports: make(map[string]bool),
 	}, nil
 }
 
+func findPkgPath(pkgInputVal string, srcPkg *packages.Package) (string, error) {
+	if pkgInputVal == "" {
+		return srcPkg.PkgPath, nil
+	}
+	if pkgInDir(".", pkgInputVal) {
+		return ".", nil
+	}
+	if pkgInDir(srcPkg.PkgPath, pkgInputVal) {
+		return srcPkg.PkgPath, nil
+	}
+	subdirectoryPath := filepath.Join(srcPkg.PkgPath, pkgInputVal)
+	if pkgInDir(subdirectoryPath, pkgInputVal) {
+		return subdirectoryPath, nil
+	}
+	return "", nil
+}
+
+func pkgInDir(pkgName, dir string) bool {
+	currentPkg, err := pkgInfoFromPath(dir, packages.NeedName)
+	if err != nil {
+		return false
+	}
+	return currentPkg.Name == pkgName || currentPkg.Name+"_test" == pkgName
+}
+
 // Mock generates a mock for the specified interface name.
-func (m *Mocker) Mock(w io.Writer, name ...string) error {
-	if len(name) == 0 {
+func (m *Mocker) Mock(w io.Writer, names ...string) error {
+	if len(names) == 0 {
 		return errors.New("must specify one interface")
 	}
 
@@ -118,13 +109,11 @@ func (m *Mocker) Mock(w io.Writer, name ...string) error {
 		Imports:     moqImports,
 	}
 
-	// Add sync first to ensure it doesn't get an alias which will break the template
-	m.addSyncImport()
-
-	var syncNeeded bool
+	mocksMethods := false
 
 	tpkg := m.srcPkg.Types
-	for _, n := range name {
+	for _, name := range names {
+		n, mockName := parseInterfaceName(name)
 		iface := tpkg.Scope().Lookup(n)
 		if iface == nil {
 			return fmt.Errorf("cannot find interface %s", n)
@@ -135,38 +124,32 @@ func (m *Mocker) Mock(w io.Writer, name ...string) error {
 		iiface := iface.Type().Underlying().(*types.Interface).Complete()
 		obj := obj{
 			InterfaceName: n,
+			MockName:      mockName,
 		}
 		for i := 0; i < iiface.NumMethods(); i++ {
-			syncNeeded = true
+			mocksMethods = true
 			meth := iiface.Method(i)
 			sig := meth.Type().(*types.Signature)
 			method := &method{
 				Name: meth.Name(),
 			}
 			obj.Methods = append(obj.Methods, method)
-			method.Params = m.extractArgs(sig, sig.Params(), "in%d")
-			method.Returns = m.extractArgs(sig, sig.Results(), "out%d")
+			method.Params, method.Returns = m.extractArgs(sig)
 		}
 		doc.Objects = append(doc.Objects, obj)
 	}
 
-	if !syncNeeded {
-		delete(m.importByAlias, "sync")
-		delete(m.importByPath, "sync")
+	if mocksMethods {
+		doc.Imports = append(doc.Imports, "sync")
+	}
+
+	for pkgToImport := range m.imports {
+		doc.Imports = append(doc.Imports, stripVendorPath(pkgToImport))
 	}
 
 	if tpkg.Name() != m.pkgName {
-		if _, ok := m.importByPath[tpkg.Path()]; !ok {
-			alias := m.getUniqueAlias(tpkg.Name())
-			m.importByAlias[alias] = tpkg.Path()
-			m.importByPath[tpkg.Path()] = alias
-		}
-		doc.SourcePackagePrefix = m.importByPath[tpkg.Path()] + "."
-	}
-
-	for alias, path := range m.importByAlias {
-		aliasImport := fmt.Sprintf(`%s "%s"`, alias, stripVendorPath(path))
-		doc.Imports = append(doc.Imports, aliasImport)
+		doc.SourcePackagePrefix = tpkg.Name() + "."
+		doc.Imports = append(doc.Imports, stripVendorPath(tpkg.Path()))
 	}
 
 	var buf bytes.Buffer
@@ -174,9 +157,9 @@ func (m *Mocker) Mock(w io.Writer, name ...string) error {
 	if err != nil {
 		return err
 	}
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := m.fmter(buf.Bytes())
 	if err != nil {
-		return fmt.Errorf("go/format: %s", err)
+		return err
 	}
 	if _, err := w.Write(formatted); err != nil {
 		return err
@@ -184,15 +167,8 @@ func (m *Mocker) Mock(w io.Writer, name ...string) error {
 	return nil
 }
 
-func (m *Mocker) addSyncImport() {
-	if _, ok := m.importByPath["sync"]; !ok {
-		m.importByAlias["sync"] = "sync"
-		m.importByPath["sync"] = "sync"
-	}
-}
-
 func (m *Mocker) packageQualifier(pkg *types.Package) string {
-	if m.pkgPath == pkg.Path() {
+	if m.pkgPath != "" && m.pkgPath == pkg.Path() {
 		return ""
 	}
 	path := pkg.Path()
@@ -202,60 +178,41 @@ func (m *Mocker) packageQualifier(pkg *types.Package) string {
 			path = stripGopath(wd)
 		}
 	}
-
-	if alias, ok := m.importByPath[path]; ok {
-		return alias
-	}
-
-	alias := pkg.Name()
-
-	if _, ok := m.importByAlias[alias]; ok {
-		alias = m.getUniqueAlias(alias)
-	}
-
-	m.importByAlias[alias] = path
-	m.importByPath[path] = alias
-
-	return alias
+	m.imports[path] = true
+	return pkg.Name()
 }
 
-func (m *Mocker) getUniqueAlias(alias string) string {
-	for i := 0; ; i++ {
-		newAlias := alias + string('a'+byte(i))
-		if _, exists := m.importByAlias[newAlias]; !exists {
-			return newAlias
-		}
-	}
-}
-
-func (m *Mocker) extractArgs(sig *types.Signature, list *types.Tuple, nameFormat string) []*param {
-	var params []*param
-	listLen := list.Len()
-	for ii := 0; ii < listLen; ii++ {
-		p := list.At(ii)
-		name := p.Name()
-		if name == "" {
-			name = fmt.Sprintf(nameFormat, ii+1)
-		}
-		typename := types.TypeString(p.Type(), m.packageQualifier)
+func (m *Mocker) extractArgs(sig *types.Signature) (params, results []*param) {
+	pp := sig.Params()
+	for i := 0; i < pp.Len(); i++ {
+		p := m.buildParam(pp.At(i), "in"+strconv.Itoa(i+1))
 		// check for final variadic argument
-		variadic := sig.Variadic() && ii == listLen-1 && typename[0:2] == "[]"
-		param := &param{
-			Name:     name,
-			Type:     typename,
-			Variadic: variadic,
-		}
-		params = append(params, param)
+		p.Variadic = sig.Variadic() && i == pp.Len()-1 && p.Type[0:2] == "[]"
+		params = append(params, p)
 	}
-	return params
+
+	rr := sig.Results()
+	for i := 0; i < rr.Len(); i++ {
+		results = append(results, m.buildParam(rr.At(i), "out"+strconv.Itoa(i+1)))
+	}
+
+	return
 }
 
-func pkgInfoFromPath(src string, mode packages.LoadMode) (*packages.Package, error) {
-	conf := packages.Config{
-		Mode: mode,
-		Dir:  src,
+func (m *Mocker) buildParam(v *types.Var, fallbackName string) *param {
+	name := v.Name()
+	if name == "" {
+		name = fallbackName
 	}
-	pkgs, err := packages.Load(&conf)
+	typ := types.TypeString(v.Type(), m.packageQualifier)
+	return &param{Name: name, Type: typ}
+}
+
+func pkgInfoFromPath(srcDir string, mode packages.LoadMode) (*packages.Package, error) {
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: mode,
+		Dir:  srcDir,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -268,6 +225,16 @@ func pkgInfoFromPath(src string, mode packages.LoadMode) (*packages.Package, err
 	return pkgs[0], nil
 }
 
+func parseInterfaceName(name string) (ifaceName, mockName string) {
+	parts := strings.SplitN(name, ":", 2)
+	ifaceName = parts[0]
+	mockName = ifaceName + "Mock"
+	if len(parts) == 2 {
+		mockName = parts[1]
+	}
+	return
+}
+
 type doc struct {
 	PackageName         string
 	SourcePackagePrefix string
@@ -277,6 +244,7 @@ type doc struct {
 
 type obj struct {
 	InterfaceName string
+	MockName      string
 	Methods       []*method
 }
 type method struct {
@@ -362,18 +330,15 @@ func stripVendorPath(p string) string {
 	return strings.TrimLeft(path.Join(parts[1:]...), "/")
 }
 
-// stripGopath takes the directory to a package and remove the gopath to get the
-// canonical package name.
-//
-// taken from https://github.com/ernesto-jimenez/gogen
-// Copyright (c) 2015 Ernesto Jiménez
+// stripGopath takes the directory to a package and removes the
+// $GOPATH/src path to get the canonical package name.
 func stripGopath(p string) string {
-	for _, gopath := range gopaths() {
-		p = strings.TrimPrefix(p, path.Join(gopath, "src")+"/")
+	for _, srcDir := range build.Default.SrcDirs() {
+		rel, err := filepath.Rel(srcDir, p)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			continue
+		}
+		return filepath.ToSlash(rel)
 	}
 	return p
-}
-
-func gopaths() []string {
-	return strings.Split(os.Getenv("GOPATH"), string(filepath.ListSeparator))
 }
