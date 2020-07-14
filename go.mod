@@ -16,7 +16,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-	golang.org/x/tools v0.0.0-20200710042808-f1c4188a97a1 // indirect
+	golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72
 	google.golang.org/appengine v1.6.1 // indirect
 	k8s.io/api v0.18.0
 	k8s.io/apiextensions-apiserver v0.18.0
