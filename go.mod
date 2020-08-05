@@ -26,4 +26,5 @@ require (
 	k8s.io/apimachinery v0.18.0
 	k8s.io/client-go v0.18.0
 	k8s.io/gengo v0.0.0-20200114144118-36b2048a9120
+	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
 )

@@ -251,7 +251,6 @@ func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 		listTrace.Log()
 	}
 	return filtered, nil
-
 }
 
 func (s *Store) retryList(namespace string, apiContext *types.APIContext) (*unstructured.UnstructuredList, error) {
