@@ -20,7 +20,10 @@ import (
 func RunETCD(ctx context.Context, dataDir string) ([]string, error) {
 	endpoint := "http://localhost:2379"
 
-	go runEtcd(ctx, []string{"etcd", fmt.Sprintf("--data-dir=%s", filepath.Join(dataDir, "etcd"))})
+	go runEtcd(ctx, []string{"etcd",
+		fmt.Sprintf("--data-dir=%s", filepath.Join(dataDir, "etcd")),
+		"--heartbeat-interval=500",
+		"--election-timeout=5000"})
 
 	if err := checkEtcd(endpoint); err != nil {
 		return nil, errors.Wrap(err, "waiting on etcd")
