@@ -447,6 +447,10 @@ func (b *Builder) convertArray(fieldType string, value interface{}, op Operation
 	}
 
 	var result []interface{}
+	if value == nil {
+		return result, nil
+	}
+	result = make([]interface{}, 0)
 	subType := definition.SubType(fieldType)
 
 	for _, value := range sliceValue {
