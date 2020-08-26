@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rancher/lasso/pkg/controller"
-
 	errors2 "github.com/pkg/errors"
+	"github.com/rancher/lasso/pkg/controller"
 	"github.com/rancher/norman/metrics"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 )
@@ -28,13 +28,15 @@ type genericController struct {
 	controller controller.SharedController
 	informer   cache.SharedIndexInformer
 	name       string
+	namespace  string
 }
 
-func NewGenericController(name string, controller controller.SharedController) GenericController {
+func NewGenericController(namespace, name string, controller controller.SharedController) GenericController {
 	return &genericController{
 		controller: controller,
 		informer:   controller.Informer(),
 		name:       name,
+		namespace:  namespace,
 	}
 }
 
@@ -52,6 +54,9 @@ func (g *genericController) EnqueueAfter(namespace, name string, after time.Dura
 
 func (g *genericController) AddHandler(ctx context.Context, name string, handler HandlerFunc) {
 	g.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(func(key string, obj runtime.Object) (runtime.Object, error) {
+		if !isNamespace(g.namespace, obj) {
+			return obj, nil
+		}
 		logrus.Tracef("%s calling handler %s %s", g.name, name, key)
 		metrics.IncTotalHandlerExecution(g.name, name)
 		result, err := handler(key, obj)
@@ -65,6 +70,17 @@ func (g *genericController) AddHandler(ctx context.Context, name string, handler
 		}
 		return runtimeObject, err
 	}))
+}
+
+func isNamespace(namespace string, obj runtime.Object) bool {
+	if namespace == "" {
+		return true
+	}
+	meta, err := meta.Accessor(obj)
+	if err != nil {
+		return false
+	}
+	return meta.GetNamespace() == namespace
 }
 
 func ignoreError(err error, checkString bool) bool {

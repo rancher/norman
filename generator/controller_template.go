@@ -220,7 +220,7 @@ func (c {{.schema.ID}}Factory) List() runtime.Object {
 }
 
 func (s *{{.schema.ID}}Client) Controller() {{.schema.CodeName}}Controller {
-	genericController := controller.NewGenericController({{.schema.CodeName}}GroupVersionKind.Kind+"Controller",
+	genericController := controller.NewGenericController(s.ns, {{.schema.CodeName}}GroupVersionKind.Kind+"Controller",
 		s.client.controllerFactory.ForResourceKind({{.schema.CodeName}}GroupVersionResource, {{.schema.CodeName}}GroupVersionKind.Kind, {{.schema | namespaced}}))
 
 	return &{{.schema.ID}}Controller{
