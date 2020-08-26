@@ -92,9 +92,27 @@ func (p *ObjectClient) getAPIPrefix() string {
 
 func (p *ObjectClient) Create(o runtime.Object) (runtime.Object, error) {
 	ns := p.ns
-	if obj, ok := o.(metav1.Object); ok && obj.GetNamespace() != "" {
+	obj, ok := o.(metav1.Object)
+	if ok && obj.GetNamespace() != "" {
 		ns = obj.GetNamespace()
 	}
+
+	if ok {
+		labels := obj.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		} else {
+			ls := make(map[string]string)
+			for k, v := range labels {
+				ls[k] = v
+			}
+			labels = ls
+
+		}
+		labels["cattle.io/creator"] = "norman"
+		obj.SetLabels(labels)
+	}
+
 	logrus.Tracef("REST CREATE %s/%s/%s/%s/%s", p.getAPIPrefix(), p.gvk.Group, p.gvk.Version, ns, p.resource.Name)
 	result := p.ObjectFactory().Object()
 	return result, p.client.Create(p.ctx, ns, o, result, metav1.CreateOptions{})
