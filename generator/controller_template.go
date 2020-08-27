@@ -111,10 +111,14 @@ type {{.schema.CodeName}}Interface interface {
 }
 
 type {{.schema.ID}}Lister struct {
+	ns string
 	controller *{{.schema.ID}}Controller
 }
 
 func (l *{{.schema.ID}}Lister) List(namespace string, selector labels.Selector) (ret []*{{.prefix}}{{.schema.CodeName}}, err error) {
+	if namespace == "" {
+		namespace = l.ns
+	}
 	err = cache.ListAllByNamespace(l.controller.Informer().GetIndexer(), namespace, selector, func(obj interface{}) {
 		ret = append(ret, obj.(*{{.prefix}}{{.schema.CodeName}}))
 	})
@@ -142,6 +146,7 @@ func (l *{{.schema.ID}}Lister) Get(namespace, name string) (*{{.prefix}}{{.schem
 }
 
 type {{.schema.ID}}Controller struct {
+	ns string
 	controller.GenericController
 }
 
@@ -151,6 +156,7 @@ func (c *{{.schema.ID}}Controller) Generic() controller.GenericController {
 
 func (c *{{.schema.ID}}Controller) Lister() {{.schema.CodeName}}Lister {
 	return &{{.schema.ID}}Lister{
+		ns: c.ns,
 		controller: c,
 	}
 }
@@ -224,6 +230,7 @@ func (s *{{.schema.ID}}Client) Controller() {{.schema.CodeName}}Controller {
 		s.client.controllerFactory.ForResourceKind({{.schema.CodeName}}GroupVersionResource, {{.schema.CodeName}}GroupVersionKind.Kind, {{.schema | namespaced}}))
 
 	return &{{.schema.ID}}Controller{
+		ns: s.ns,
 		GenericController: genericController,
 	}
 }
