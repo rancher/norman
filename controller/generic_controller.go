@@ -73,12 +73,13 @@ func (g *genericController) AddHandler(ctx context.Context, name string, handler
 }
 
 func isNamespace(namespace string, obj runtime.Object) bool {
-	if namespace == "" {
+	if namespace == "" || obj == nil {
 		return true
 	}
 	meta, err := meta.Accessor(obj)
 	if err != nil {
-		return false
+		// if you can't figure out the namespace, just let it through
+		return true
 	}
 	return meta.GetNamespace() == namespace
 }
