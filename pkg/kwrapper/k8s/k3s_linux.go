@@ -44,7 +44,6 @@ func getEmbedded(ctx context.Context) (bool, clientcmd.ClientConfig, error) {
 func k3sServer(ctx context.Context, endpoints []string) (string, error) {
 	cmd := exec.Command("k3s", "server",
 		"--no-deploy=traefik",
-		"--no-deploy=coredns",
 		"--no-deploy=servicelb",
 		"--no-deploy=metrics-server",
 		"--no-deploy=local-storage",
