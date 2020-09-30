@@ -47,6 +47,7 @@ func k3sServer(ctx context.Context, endpoints []string) (string, error) {
 		"--no-deploy=servicelb",
 		"--no-deploy=metrics-server",
 		"--no-deploy=local-storage",
+		"--node-name=local-node",
 		fmt.Sprintf("--datastore-endpoint=%s", strings.Join(endpoints, ",")))
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGKILL,
