@@ -12,9 +12,11 @@ type SelfLink struct {
 }
 
 func (s *SelfLink) FromInternal(data map[string]interface{}) {
-	sl, ok := data["selfLink"].(string)
-	if !ok || sl == "" {
-		data["selfLink"] = s.selflink(data)
+	if data != nil {
+		sl, ok := data["selfLink"].(string)
+		if !ok || sl == "" {
+			data["selfLink"] = s.selflink(data)
+		}
 	}
 }
 
@@ -29,7 +31,10 @@ func (s *SelfLink) ModifySchema(schema *types.Schema, schemas *types.Schemas) er
 
 func (s *SelfLink) selflink(data map[string]interface{}) string {
 	buf := &strings.Builder{}
-	name := data["name"].(string)
+	name, ok := data["name"].(string)
+	if !ok || name == "" {
+		return ""
+	}
 	apiVersion, ok := data["apiVersion"].(string)
 	if !ok || apiVersion == "v1" {
 		buf.WriteString("/api/v1/")
@@ -39,7 +44,7 @@ func (s *SelfLink) selflink(data map[string]interface{}) string {
 		buf.WriteString("/")
 	}
 	namespace, ok := data["namespace"].(string)
-	if !ok || namespace != "" {
+	if ok && namespace != "" {
 		buf.WriteString("namespaces/")
 		buf.WriteString(namespace)
 		buf.WriteString("/")
