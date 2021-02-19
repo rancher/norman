@@ -13,6 +13,7 @@ func NewObject(mappers ...types.Mapper) Object {
 		Mappers: append([]types.Mapper{
 			&APIGroup{},
 			&Embed{Field: "metadata"},
+			&SelfLink{},
 			&Embed{Field: "spec", Optional: true},
 			&ReadOnly{Field: "status", Optional: true, SubFields: true},
 			Drop{Field: "kind"},
