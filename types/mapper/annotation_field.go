@@ -13,10 +13,14 @@ type AnnotationField struct {
 	Object           bool
 	List             bool
 	IgnoreDefinition bool
+	Domain           string
 }
 
 func (e AnnotationField) FromInternal(data map[string]interface{}) {
-	v, ok := values.RemoveValue(data, "annotations", "field.cattle.io/"+e.Field)
+	if len(e.Domain) == 0 {
+		e.Domain = "field.cattle.io"
+	}
+	v, ok := values.RemoveValue(data, "annotations", e.Domain+"/"+e.Field)
 	if ok {
 		if e.Object {
 			data := map[string]interface{}{}
@@ -37,6 +41,9 @@ func (e AnnotationField) FromInternal(data map[string]interface{}) {
 }
 
 func (e AnnotationField) ToInternal(data map[string]interface{}) error {
+	if len(e.Domain) == 0 {
+		e.Domain = "field.cattle.io"
+	}
 	v, ok := data[e.Field]
 	if ok {
 		if e.Object || e.List {
@@ -44,7 +51,7 @@ func (e AnnotationField) ToInternal(data map[string]interface{}) error {
 				v = string(bytes)
 			}
 		}
-		values.PutValue(data, convert.ToString(v), "annotations", "field.cattle.io/"+e.Field)
+		values.PutValue(data, convert.ToString(v), "annotations", e.Domain+"/"+e.Field)
 	}
 	values.RemoveValue(data, e.Field)
 	return nil
