@@ -25,7 +25,7 @@ func (s *SelfLink) ToInternal(data map[string]interface{}) error {
 }
 
 func (s *SelfLink) ModifySchema(schema *types.Schema, schemas *types.Schemas) error {
-	s.resource = name.GuessPluralName(schema.ID)
+	s.resource = name.GuessPluralName(strings.ToLower(schema.ID))
 	return nil
 }
 
