@@ -35,17 +35,19 @@ type fieldInfo struct {
 }
 
 func getGoType(field types.Field, schema *types.Schema, schemas *types.Schemas) string {
-	return getTypeString(field.Nullable, field.Type, schema, schemas)
+	return getTypeString(field.Nullable, field.Type, field.Pointer, schema, schemas)
 }
 
-func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas *types.Schemas) string {
+func getTypeString(nullable bool, typeName string, pointer bool, schema *types.Schema, schemas *types.Schemas) string {
 	switch {
+	case pointer:
+		return "*" + getTypeString(nullable, typeName, false, schema, schemas)
 	case strings.HasPrefix(typeName, "reference["):
 		return "string"
 	case strings.HasPrefix(typeName, "map["):
-		return "map[string]" + getTypeString(false, typeName[len("map["):len(typeName)-1], schema, schemas)
+		return "map[string]" + getTypeString(false, typeName[len("map["):len(typeName)-1], false, schema, schemas)
 	case strings.HasPrefix(typeName, "array["):
-		return "[]" + getTypeString(false, typeName[len("array["):len(typeName)-1], schema, schemas)
+		return "[]" + getTypeString(false, typeName[len("array["):len(typeName)-1], false, schema, schemas)
 	}
 
 	name := ""
@@ -81,8 +83,6 @@ func getTypeString(nullable bool, typeName string, schema *types.Schema, schemas
 		return "string"
 	case "hostname":
 		return "string"
-	case "nullablestring":
-		return "*string"
 	default:
 		if schema != nil && schemas != nil {
 			otherSchema := schemas.Schema(&schema.Version, typeName)
