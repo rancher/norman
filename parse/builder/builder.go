@@ -382,8 +382,6 @@ func ConvertSimple(fieldType string, value interface{}, op Operation) (interface
 		return convert.ToString(value), nil
 	case "reference":
 		return convert.ToString(value), nil
-	case "nullablestring":
-		return convert.ToString(value), nil
 	}
 
 	return nil, ErrComplexType
