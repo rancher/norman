@@ -10,7 +10,7 @@ import (
 	"github.com/rancher/norman/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
-	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,7 +81,8 @@ func (f *Factory) AssignStores(ctx context.Context, storageContext types.Storage
 			storageContext,
 			[]string{"apis"},
 			crd.Spec.Group,
-			crd.Spec.Version,
+			// Even if CRD is created as v1beta1, it's served as v1 with a single element in Versions
+			crd.Spec.Versions[0].Name,
 			crd.Status.AcceptedNames.Kind,
 			crd.Status.AcceptedNames.Plural)
 	}
@@ -139,7 +140,7 @@ func (f *Factory) waitCRD(ctx context.Context, apiClient clientset.Interface, cr
 		}
 		first = false
 
-		crd, err := apiClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
+		crd, err := apiClient.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -176,8 +177,23 @@ func (f *Factory) createCRD(ctx context.Context, apiClient clientset.Interface, 
 			Name: name,
 		},
 		Spec: apiext.CustomResourceDefinitionSpec{
-			Group:   schema.Version.Group,
-			Version: schema.Version.Version,
+			Group: schema.Version.Group,
+			Versions: []apiext.CustomResourceDefinitionVersion{
+				{
+					Name:    schema.Version.Version,
+					Served:  true,
+					Storage: true,
+					// Using catch-all schema as it's required in v1 and we do not have enough info in `schema`
+					// Note catch-all schema used in Wrangler (open schema for "spec" and "status") is not good enough
+					// here as Norman CRDs often define direct fields
+					Schema: &apiext.CustomResourceValidation{
+						OpenAPIV3Schema: &apiext.JSONSchemaProps{
+							Type:                   "object",
+							XPreserveUnknownFields: &[]bool{true}[0],
+						},
+					},
+				},
+			},
 			Names: apiext.CustomResourceDefinitionNames{
 				Plural: plural,
 				Kind:   schema.CodeName,
@@ -192,7 +208,7 @@ func (f *Factory) createCRD(ctx context.Context, apiClient clientset.Interface, 
 	}
 
 	logrus.Infof("Creating CRD %s", name)
-	crd2, err := apiClient.ApiextensionsV1beta1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{})
+	crd2, err := apiClient.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
 		return crd, nil
 	}
@@ -200,7 +216,7 @@ func (f *Factory) createCRD(ctx context.Context, apiClient clientset.Interface, 
 }
 
 func (f *Factory) getReadyCRDs(ctx context.Context, apiClient clientset.Interface) (map[string]*apiext.CustomResourceDefinition, error) {
-	list, err := apiClient.ApiextensionsV1beta1().CustomResourceDefinitions().List(ctx, metav1.ListOptions{})
+	list, err := apiClient.ApiextensionsV1().CustomResourceDefinitions().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
