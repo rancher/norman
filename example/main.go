@@ -51,7 +51,7 @@ func main() {
 	}
 
 	Schemas.MustImportAndCustomize(&version, Foo{}, func(schema *types.Schema) {
-		if err := crdFactory.AssignStores(context.Background(), types.DefaultStorageContext, schema); err != nil {
+		if err := crdFactory.AssignStores(context.Background(), types.DefaultStorageContext, nil, schema); err != nil {
 			panic(err)
 		}
 	})
