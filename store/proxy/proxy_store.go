@@ -85,6 +85,11 @@ func (s *simpleClientGetter) APIExtClient(apiContext *types.APIContext, context 
 	return s.apiExtClient, nil
 }
 
+type StoreTyper interface {
+	runtime.ObjectConvertor
+	runtime.ObjectCreater
+}
+
 type Store struct {
 	sync.Mutex
 
@@ -98,10 +103,17 @@ type Store struct {
 	authContext    map[string]string
 	close          context.Context
 	broadcasters   map[rest.Interface]*broadcast.Broadcaster
+	typer          StoreTyper
 }
 
-func NewProxyStore(ctx context.Context, clientGetter ClientGetter, storageContext types.StorageContext,
+func NewProxyStore(ctx context.Context, clientGetter ClientGetter, storageContext types.StorageContext, typer StoreTyper,
 	prefix []string, group, version, kind, resourcePlural string) types.Store {
+
+	// Default to an empty scheme, all types will default to generic
+	if typer == nil {
+		typer = runtime.NewScheme()
+	}
+
 	return &errorStore{
 		Store: &Store{
 			clientGetter:   clientGetter,
@@ -117,6 +129,7 @@ func NewProxyStore(ctx context.Context, clientGetter ClientGetter, storageContex
 			},
 			close:        ctx,
 			broadcasters: map[rest.Interface]*broadcast.Broadcaster{},
+			typer:        typer,
 		},
 	}
 }
@@ -201,16 +214,20 @@ func (s *Store) Context() types.StorageContext {
 }
 
 func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) ([]map[string]interface{}, error) {
-	var resultList unstructured.UnstructuredList
+	result := []map[string]interface{}{}
 
 	// if there are no namespaces field in options, a single request is made
 	if opt == nil || opt.Namespaces == nil {
 		ns := getNamespace(apiContext, opt)
-		list, err := s.retryList(ns, apiContext)
+		resultList := s.getListStruct()
+
+		err := s.retryList(ns, apiContext, resultList)
 		if err != nil {
 			return nil, err
 		}
-		resultList = *list
+
+		collectionResults, _ := s.collectionFromInternal(resultList, apiContext, schema)
+		result = append(result, collectionResults...)
 	} else {
 		var (
 			errGroup errgroup.Group
@@ -221,13 +238,16 @@ func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 		for _, ns := range allNS {
 			nsCopy := ns
 			errGroup.Go(func() error {
-				list, err := s.retryList(nsCopy, apiContext)
+				resultList := s.getListStruct()
+
+				err := s.retryList(nsCopy, apiContext, resultList)
 				if err != nil {
 					return err
 				}
 
 				mux.Lock()
-				resultList.Items = append(resultList.Items, list.Items...)
+				collectionResults, _ := s.collectionFromInternal(resultList, apiContext, schema)
+				result = append(result, collectionResults...)
 				mux.Unlock()
 
 				return nil
@@ -238,26 +258,18 @@ func (s *Store) List(apiContext *types.APIContext, schema *types.Schema, opt *ty
 		}
 	}
 
-	var result []map[string]interface{}
-
-	for _, obj := range resultList.Items {
-		result = append(result, s.fromInternal(apiContext, schema, obj.Object))
-	}
-
 	return apiContext.AccessControl.FilterList(apiContext, schema, result, s.authContext), nil
 }
 
-func (s *Store) retryList(namespace string, apiContext *types.APIContext) (*unstructured.UnstructuredList, error) {
-	var resultList *unstructured.UnstructuredList
+func (s *Store) retryList(namespace string, apiContext *types.APIContext, resultList runtime.Object) error {
 	k8sClient, err := s.k8sClient(apiContext)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for i := 0; i < 3; i++ {
 		req := s.common(namespace, k8sClient.Get())
 		start := time.Now()
-		resultList = &unstructured.UnstructuredList{}
 		err = req.Do(apiContext.Request.Context()).Into(resultList)
 		logrus.Tracef("LIST: %v, %v", time.Now().Sub(start), s.resourcePlural)
 		if err != nil {
@@ -265,11 +277,11 @@ func (s *Store) retryList(namespace string, apiContext *types.APIContext) (*unst
 				logrus.Infof("Error on LIST %v: %v. Attempt: %v. Retrying", s.resourcePlural, err, i+1)
 				continue
 			}
-			return resultList, err
+			return err
 		}
-		return resultList, err
+		return err
 	}
-	return resultList, err
+	return err
 }
 
 func (s *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
@@ -567,4 +579,39 @@ func (s *Store) fromInternal(apiContext *types.APIContext, schema *types.Schema,
 	}
 
 	return data
+}
+
+// getListStruct returns a runtime object for storing results from list requests.  If the Store's scheme does not return
+// a type for the resource associated with the store, a generic type will be used.
+func (s *Store) getListStruct() runtime.Object {
+	// try to find the list type for this store
+	obj, err := s.typer.New(schema.GroupVersionKind{
+		Group:   s.group,
+		Version: s.version,
+		Kind:    s.kind + "List",
+	})
+	// if we cannot get the specific type default to a generic parser
+	if err != nil {
+		logrus.Debugf("Falling back to generic list type for [%s]: %v", s.kind, err)
+		return new(unstructured.UnstructuredList)
+	}
+
+	return obj
+}
+
+// collectionFromInternal maps a collection runtime object to an array of maps.
+func (s *Store) collectionFromInternal(list runtime.Object, apiContext *types.APIContext, schema *types.Schema) ([]map[string]interface{}, error) {
+	var ul unstructured.UnstructuredList
+
+	err := s.typer.Convert(list, &ul, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]map[string]interface{}, len(ul.Items))
+	for i := range ul.Items {
+		results[i] = s.fromInternal(apiContext, schema, ul.Items[i].Object)
+	}
+
+	return results, nil
 }
