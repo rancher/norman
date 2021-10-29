@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/gorilla/websocket v1.4.0
+	github.com/gorilla/websocket v1.4.1
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/maruel/panicparse v0.0.0-20171209025017-c0182c169410
 	github.com/maruel/ut v1.0.0 // indirect
