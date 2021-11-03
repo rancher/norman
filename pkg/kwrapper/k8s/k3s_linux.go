@@ -6,11 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/rancher/norman/pkg/kwrapper/etcd"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -24,12 +22,7 @@ func getEmbedded(ctx context.Context) (bool, clientcmd.ClientConfig, error) {
 		err error
 	)
 
-	etcdEndpoints, err := etcd.RunETCD(ctx, "./management-state")
-	if err != nil {
-		return false, nil, err
-	}
-
-	kubeConfig, err := k3sServer(ctx, etcdEndpoints)
+	kubeConfig, err := k3sServer(ctx)
 	if err != nil {
 		return false, nil, err
 	}
@@ -41,15 +34,13 @@ func getEmbedded(ctx context.Context) (bool, clientcmd.ClientConfig, error) {
 	return true, clientConfig, nil
 }
 
-func k3sServer(ctx context.Context, endpoints []string) (string, error) {
+func k3sServer(ctx context.Context) (string, error) {
 	cmd := exec.Command("k3s", "server",
-		"--no-deploy=traefik",
-		"--no-deploy=servicelb",
-		"--no-deploy=metrics-server",
-		"--no-deploy=local-storage",
+		"--cluster-init",
+		"--disable=traefik,servicelb,metrics-server,local-storage",
 		"--node-name=local-node",
-		"--log=./k3s.log",
-		fmt.Sprintf("--datastore-endpoint=%s", strings.Join(endpoints, ",")))
+		"--log=./k3s.log")
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGKILL,
 	}
