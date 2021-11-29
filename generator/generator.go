@@ -106,7 +106,7 @@ func getTypeString(nullable bool, typeName string, pointer bool, schema *types.S
 func getTypeMap(schema *types.Schema, schemas *types.Schemas) map[string]fieldInfo {
 	result := map[string]fieldInfo{}
 	for name, field := range schema.ResourceFields {
-		if strings.EqualFold(name, "id") {
+		if strings.EqualFold(name, "id") && hasGet(schema) {
 			continue
 		}
 		result[field.CodeName] = fieldInfo{
