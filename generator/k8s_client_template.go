@@ -6,6 +6,7 @@ import (
 	"github.com/rancher/lasso/pkg/client"
 	"github.com/rancher/lasso/pkg/controller"
 	"github.com/rancher/norman/objectclient"
+	"github.com/rancher/norman/generator"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	{{.importPackage}}
@@ -26,7 +27,10 @@ func NewForConfig(cfg rest.Config) (Interface, error) {
 	if err := {{.prefix}}AddToScheme(scheme); err != nil {
 		return nil, err
 	}
-	controllerFactory, err := controller.NewSharedControllerFactoryFromConfig(&cfg, scheme)
+	sharedOpts := &controller.SharedControllerFactoryOptions{
+		SyncOnlyChangedObjects: generator.SyncOnlyChangedObjects(),
+	}
+	controllerFactory, err := controller.NewSharedControllerFactoryFromConfigWithOptions(&cfg, scheme, sharedOpts)
 	if err != nil {
 		return nil, err
 	}
