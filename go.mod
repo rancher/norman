@@ -11,7 +11,7 @@ require (
 	github.com/matryer/moq v0.0.0-20200607124540-4638a53893e6
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.4.0
-	github.com/rancher/lasso v0.0.0-20200820172840-0e4cc0ef5cb0
+	github.com/rancher/lasso v0.0.0-20220506212308-e3ef9b77cc49
 	github.com/rancher/wrangler v0.6.2-0.20200820173016-2068de651106
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
