@@ -2,11 +2,16 @@ package generator
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"text/template"
 
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
+)
+
+const (
+	managementContextType = "mgmt"
 )
 
 func funcs() template.FuncMap {
@@ -52,4 +57,22 @@ func getCollectionOutput(output, codeName string) string {
 		return codeName + "Collection"
 	}
 	return convert.Capitalize(output)
+}
+
+// SyncOnlyChangedObjects check whether the CATTLE_SKIP_NO_CHANGE_UPDATE env var is
+// configured to skip the update handler for events on the management context
+// that do not contain a change to the object.
+func SyncOnlyChangedObjects() bool {
+	skipNoChangeUpdate := os.Getenv("CATTLE_SYNC_ONLY_CHANGED_OBJECTS")
+	if skipNoChangeUpdate == "" {
+		return false
+	}
+	parts := strings.Split(skipNoChangeUpdate, ",")
+
+	for _, part := range parts {
+		if part == managementContextType {
+			return true
+		}
+	}
+	return false
 }
