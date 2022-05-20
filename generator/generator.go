@@ -1,3 +1,7 @@
+/*
+Package generator contains templates and functions to generate clients, controllers, and lifecycles. The Generate functions
+are exported and intended to be used by other libraries.
+*/
 package generator
 
 import (
