@@ -6,6 +6,7 @@ import (
 
 	"github.com/rancher/norman/objectclient"
 	"github.com/rancher/norman/types/slice"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -141,6 +142,9 @@ func (o *objectLifecycleAdapter) removeFinalizer(name string, obj runtime.Object
 		}
 
 		obj, err = o.objectClient.GetNamespaced(metadata.GetNamespace(), metadata.GetName(), metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
 		if err != nil {
 			return nil, err
 		}
