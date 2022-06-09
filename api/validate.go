@@ -52,7 +52,8 @@ func CheckCSRF(apiContext *types.APIContext) error {
 
 	cookie, err := apiContext.Request.Cookie(csrfCookie)
 	if err == http.ErrNoCookie {
-		bytes := make([]byte, 5)
+		// 16 bytes = 32 Hex Char = 128 bit entropy
+		bytes := make([]byte, 16)
 		_, err := rand.Read(bytes)
 		if err != nil {
 			return httperror.WrapAPIError(err, httperror.ServerError, "Failed in CSRF processing")
