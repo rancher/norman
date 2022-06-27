@@ -12,13 +12,13 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.0.0-20220519004610-700f167d8324
 	github.com/rancher/wrangler v0.6.2-0.20200820173016-2068de651106
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/tools v0.1.5
-	k8s.io/api v0.23.3
-	k8s.io/apiextensions-apiserver v0.18.0
-	k8s.io/apimachinery v0.23.3
-	k8s.io/client-go v0.23.3
-	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c
+	golang.org/x/tools v0.1.10-0.20220218145154-897bd77cd717
+	k8s.io/api v0.24.0
+	k8s.io/apiextensions-apiserver v0.24.0
+	k8s.io/apimachinery v0.24.0
+	k8s.io/client-go v0.24.0
+	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185
 )
