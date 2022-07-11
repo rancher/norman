@@ -85,7 +85,7 @@ func handler(apiContext *types.APIContext) error {
 	}
 
 	go func() {
-		readerGroup.Wait()
+		_ = readerGroup.Wait()
 		close(events)
 	}()
 

@@ -62,5 +62,5 @@ func main() {
 	}
 
 	fmt.Println("Listening on 0.0.0.0:1234")
-	http.ListenAndServe("0.0.0.0:1234", server)
+	panic(http.ListenAndServe("0.0.0.0:1234", server))
 }

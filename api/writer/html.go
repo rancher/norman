@@ -41,7 +41,7 @@ type HTMLResponseWriter struct {
 }
 
 func (h *HTMLResponseWriter) start(apiContext *types.APIContext, code int, obj interface{}) {
-	AddCommonResponseHeader(apiContext)
+	_ = AddCommonResponseHeader(apiContext)
 	apiContext.Response.Header().Set("content-type", "text/html")
 	apiContext.Response.Header().Set("X-Frame-Options", "SAMEORIGIN")
 	apiContext.Response.WriteHeader(code)
@@ -68,10 +68,10 @@ func (h *HTMLResponseWriter) Write(apiContext *types.APIContext, code int, obj i
 	headerString = strings.Replace(headerString, "%JSURL%", jsurl, 1)
 	headerString = strings.Replace(headerString, "%CSSURL%", cssurl, 1)
 
-	apiContext.Response.Write([]byte(headerString))
-	h.Body(apiContext, apiContext.Response, obj)
+	_, _ = apiContext.Response.Write([]byte(headerString))
+	_ = h.Body(apiContext, apiContext.Response, obj)
 	if schemaSchema != nil {
-		apiContext.Response.Write(end)
+		_, _ = apiContext.Response.Write(end)
 	}
 }
 
