@@ -11,7 +11,9 @@ import (
 func APIUpdateMerge(schema *types.Schema, schemas *types.Schemas, dest, src map[string]interface{}, replace bool) map[string]interface{} {
 	result := UpdateMerge(schema, schemas, dest, src, replace)
 	if s, ok := dest["status"]; ok {
-		result["status"] = s
+		if _, ok := result["status"]; !ok { // don't overwrite status
+			result["status"] = s
+		}
 	}
 	if m, ok := dest["metadata"]; ok {
 		result["metadata"] = mergeMetadata(convert.ToMapInterface(m), convert.ToMapInterface(src["metadata"]))
