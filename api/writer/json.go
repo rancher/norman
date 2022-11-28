@@ -18,14 +18,14 @@ type EncodingResponseWriter struct {
 }
 
 func (j *EncodingResponseWriter) start(apiContext *types.APIContext, code int, obj interface{}) {
-	AddCommonResponseHeader(apiContext)
+	_ = AddCommonResponseHeader(apiContext)
 	apiContext.Response.Header().Set("content-type", j.ContentType)
 	apiContext.Response.WriteHeader(code)
 }
 
 func (j *EncodingResponseWriter) Write(apiContext *types.APIContext, code int, obj interface{}) {
 	j.start(apiContext, code, obj)
-	j.Body(apiContext, apiContext.Response, obj)
+	_ = j.Body(apiContext, apiContext.Response, obj)
 }
 
 func (j *EncodingResponseWriter) Body(apiContext *types.APIContext, writer io.Writer, obj interface{}) error {

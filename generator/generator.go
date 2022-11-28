@@ -517,7 +517,7 @@ func prepareDirs(dirs ...string) error {
 }
 
 func Gofmt(workDir, pkg string) error {
-	return filepath.Walk(filepath.Join(workDir, pkg), func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(filepath.Join(workDir, pkg), func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil
 		}

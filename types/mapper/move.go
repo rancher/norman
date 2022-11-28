@@ -43,6 +43,9 @@ func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {
 	if err != nil {
 		return err
 	}
+	if !ok {
+		return fmt.Errorf("failed to find field %s on schema %s", m.To, s.ID)
+	}
 	_, ok = toSchema.ResourceFields[toFieldName]
 	if ok && !strings.Contains(m.To, "/") && !m.DestDefined {
 		return fmt.Errorf("field %s already exists on schema %s", m.To, s.ID)

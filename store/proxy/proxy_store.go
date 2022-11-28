@@ -141,7 +141,7 @@ func (s *Store) getUser(apiContext *types.APIContext) string {
 func (s *Store) doAuthed(apiContext *types.APIContext, request *rest.Request) rest.Result {
 	start := time.Now()
 	defer func() {
-		logrus.Tracef("GET: %v, %v", time.Now().Sub(start), s.resourcePlural)
+		logrus.Tracef("GET: %v, %v", time.Since(start), s.resourcePlural)
 	}()
 
 	for _, header := range authHeaders {
@@ -271,7 +271,7 @@ func (s *Store) retryList(namespace string, apiContext *types.APIContext, result
 		req := s.common(namespace, k8sClient.Get())
 		start := time.Now()
 		err = req.Do(apiContext.Request.Context()).Into(resultList)
-		logrus.Tracef("LIST: %v, %v", time.Now().Sub(start), s.resourcePlural)
+		logrus.Tracef("LIST: %v, %v", time.Since(start), s.resourcePlural)
 		if err != nil {
 			if i < 2 && strings.Contains(err.Error(), "Client.Timeout exceeded") {
 				logrus.Infof("Error on LIST %v: %v. Attempt: %v. Retrying", s.resourcePlural, err, i+1)
