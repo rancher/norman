@@ -293,10 +293,7 @@ func parseAction(url *url.URL) (string, string) {
 }
 
 func Body(req *http.Request) (map[string]interface{}, error) {
-	err := req.ParseMultipartForm(maxFormSize)
-	if err != nil {
-		return nil, err
-	}
+	_ = req.ParseMultipartForm(maxFormSize)
 	if req.MultipartForm != nil {
 		return valuesToBody(req.MultipartForm.Value), nil
 	}

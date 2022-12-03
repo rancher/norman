@@ -2,7 +2,6 @@ package mapper
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/rancher/norman/types"
@@ -39,13 +38,11 @@ func (m Move) ModifySchema(s *types.Schema, schemas *types.Schemas) error {
 		return fmt.Errorf("failed to find field %s on schema %s", m.From, s.ID)
 	}
 
-	toSchema, toFieldName, _, ok, err := getField(s, schemas, m.To)
+	toSchema, toFieldName, _, _, err := getField(s, schemas, m.To)
 	if err != nil {
 		return err
 	}
-	if !ok {
-		return fmt.Errorf("failed to find field %s on schema %s", m.To, s.ID)
-	}
+
 	_, ok = toSchema.ResourceFields[toFieldName]
 	if ok && !strings.Contains(m.To, "/") && !m.DestDefined {
 		return fmt.Errorf("field %s already exists on schema %s", m.To, s.ID)
