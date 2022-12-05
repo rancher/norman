@@ -6,7 +6,7 @@ import (
 	"github.com/rancher/norman/authorization"
 	"github.com/rancher/norman/types"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
+	"io"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,7 +140,7 @@ func TestList(t *testing.T) {
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
 		clientGetter.RESTClient.Resp = &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(&fakeResponse),
+			Body:       io.NopCloser(&fakeResponse),
 		}
 
 		res, err := sut.List(&apiContext, &schema, &types.QueryOptions{})
@@ -157,7 +157,7 @@ func TestList(t *testing.T) {
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
 		clientGetter.RESTClient.Resp = &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(&fakeResponse),
+			Body:       io.NopCloser(&fakeResponse),
 		}
 
 		res, err := sut.List(&apiContext, &schema, &types.QueryOptions{})
@@ -176,7 +176,7 @@ func TestList(t *testing.T) {
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
 		clientGetter.RESTClient.Resp = &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(&fakeResponse),
+			Body:       io.NopCloser(&fakeResponse),
 		}
 
 		res, err := sut.List(&apiContext, &schema, &types.QueryOptions{})

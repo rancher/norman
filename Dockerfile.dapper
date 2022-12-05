@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/golang:1.17
+FROM registry.suse.com/bci/golang:1.19-18.38
 
 ARG DAPPER_HOST_ARCH
 ENV ARCH $DAPPER_HOST_ARCH
@@ -10,7 +10,6 @@ RUN if [ "${ARCH}" == "amd64" ]; then \
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.46.2; \
     fi
 
-ENV GO111MODULE off
 ENV DAPPER_ENV REPO TAG DRONE_TAG
 ENV DAPPER_SOURCE /go/src/github.com/rancher/norman/
 ENV DAPPER_OUTPUT ./bin ./dist

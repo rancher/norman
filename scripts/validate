@@ -11,4 +11,5 @@ if ! command -v golangci-lint; then
 fi
 
 echo Running: golangci-lint
+export "GOROOT=$(go env GOROOT)"
 golangci-lint run
