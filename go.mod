@@ -8,10 +8,10 @@ require (
 	github.com/maruel/panicparse v0.0.0-20171209025017-c0182c169410
 	github.com/matryer/moq v0.0.0-20200607124540-4638a53893e6
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/lasso v0.0.0-20221202205459-e7138f16489c
-	github.com/rancher/wrangler v1.0.1-0.20221202234327-1cafffeaa9a1
+	github.com/rancher/lasso v0.0.0-20221227210133-6ea88ca2fbcc
+	github.com/rancher/wrangler v1.1.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.12
