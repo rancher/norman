@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/maruel/panicparse v0.0.0-20171209025017-c0182c169410
 	github.com/matryer/moq v0.3.2
 	github.com/pkg/errors v0.9.1
