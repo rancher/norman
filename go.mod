@@ -5,7 +5,8 @@ go 1.19
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/maruel/panicparse v0.0.0-20171209025017-c0182c169410
+	github.com/maruel/panicparse v1.6.2
+	github.com/maruel/panicparse/v2 v2.3.1
 	github.com/matryer/moq v0.3.2
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.0.0-20221227210133-6ea88ca2fbcc
