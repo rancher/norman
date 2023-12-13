@@ -188,7 +188,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	if opts.ProxyURL != "" {
 		proxyURL, err := url.Parse(opts.ProxyURL)
 		if err != nil {
-			return result, err
+			return result, fmt.Errorf("invalid proxy address %q: %v", opts.ProxyURL, err)
 		}
 		proxy = http.ProxyURL(proxyURL)
 	} else {
