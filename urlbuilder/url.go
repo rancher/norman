@@ -2,7 +2,6 @@ package urlbuilder
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -37,12 +36,14 @@ func New(r *http.Request, version types.APIVersion, schemas *types.Schemas) (typ
 }
 
 func ParseRequestURL(r *http.Request) string {
-	scheme := GetScheme(r)
-	host := GetHost(r, scheme)
-	return fmt.Sprintf("%s://%s%s%s", scheme, host, r.Header.Get(PrefixHeader), r.URL.Path)
+	var parsedURL url.URL
+	parsedURL.Scheme = GetScheme(r)
+	parsedURL.Host = GetHost(r)
+	parsedURL = *parsedURL.JoinPath(r.Header.Get(PrefixHeader), r.URL.Path)
+	return parsedURL.String()
 }
 
-func GetHost(r *http.Request, scheme string) string {
+func GetHost(r *http.Request) string {
 	host := r.Header.Get(ForwardedAPIHostHeader)
 	if host != "" {
 		return host
