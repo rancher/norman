@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/rancher/norman/types"
-	"github.com/rancher/wrangler/pkg/name"
+	"github.com/rancher/wrangler/v2/pkg/name"
 )
 
 type SelfLink struct {
