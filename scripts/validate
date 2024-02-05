@@ -3,6 +3,7 @@ set -e
 
 cd $(dirname $0)/..
 
+export GO111MODULE="on"
 echo Running validation
 
 PACKAGES="$(find -name '*.go' | xargs -I{} dirname {} |  cut -f2 -d/ | sort -u | grep -Ev '(^\.$|.git|.trash-cache|vendor|bin)' | sed -e 's!^!./!' -e 's!$!/...!')"
