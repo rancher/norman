@@ -1,10 +1,35 @@
 ---
 kind: pipeline
-name: default
+name: amd64
+type: docker
 
 platform:
   os: linux
   arch: amd64
+
+steps:
+- name: build
+  pull: default
+  image: rancher/dapper:v0.6.0
+  commands:
+  - dapper ci
+  privileged: true
+  volumes:
+  - name: socket
+    path: /var/run/docker.sock
+
+volumes:
+- name: socket
+  host:
+    path: /var/run/docker.sock
+---
+kind: pipeline
+name: arm64
+type: docker
+
+platform:
+  os: linux
+  arch: arm64
 
 steps:
 - name: build
