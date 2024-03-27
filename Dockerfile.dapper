@@ -10,11 +10,14 @@ RUN if [ "${ARCH}" == "amd64" ]; then \
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.57.1; \
     fi
 
+# prevents `detected dubious ownership in repository` git error due to uid/gid not matching when using bind mounts
+RUN git config -f /etc/gitconfig --add safe.directory /go/src/github.com/rancher/norman
+
 ENV DAPPER_ENV REPO TAG DRONE_TAG
 ENV DAPPER_SOURCE /go/src/github.com/rancher/norman/
+ENV DAPPER_RUN_ARGS "-v norman-pkg:/go/pkg -v norman-cache:/root/.cache/go-build"
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
-ENV HOME ${DAPPER_SOURCE}
 WORKDIR ${DAPPER_SOURCE}
 
 ENTRYPOINT ["./scripts/entry"]
