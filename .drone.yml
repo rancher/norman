@@ -9,7 +9,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: rancher/dapper:1.11.2
+  image: rancher/dapper:v0.6.0
   commands:
   - dapper ci
   privileged: true
