@@ -57,6 +57,7 @@ type ClientOpts struct {
 	WSDialer   *websocket.Dialer
 	CACerts    string
 	Insecure   bool
+	ProxyURL   string
 }
 
 func (c *ClientOpts) getAuthHeader() string {
@@ -183,6 +184,17 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 
 	client.Timeout = opts.Timeout
 
+	var proxy func(*http.Request) (*url.URL, error)
+	if opts.ProxyURL != "" {
+		proxyURL, err := url.Parse(opts.ProxyURL)
+		if err != nil {
+			return result, fmt.Errorf("invalid proxy address %q: %w", opts.ProxyURL, err)
+		}
+		proxy = http.ProxyURL(proxyURL)
+	} else {
+		proxy = http.ProxyFromEnvironment
+	}
+
 	if opts.CACerts != "" {
 		if Debug {
 			fmt.Println("Some CAcerts are provided.")
@@ -196,7 +208,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			TLSClientConfig: &tls.Config{
 				RootCAs: roots,
 			},
-			Proxy: http.ProxyFromEnvironment,
+			Proxy: proxy,
 		}
 		client.Transport = tr
 	}
@@ -209,7 +221,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: opts.Insecure,
 			},
-			Proxy: http.ProxyFromEnvironment,
+			Proxy: proxy,
 		}
 		client.Transport = tr
 	}
@@ -219,7 +231,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			fmt.Println("Insecure TLS not set and no CAcerts is provided.")
 		}
 		tr := &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
+			Proxy: proxy,
 		}
 		client.Transport = tr
 	}
