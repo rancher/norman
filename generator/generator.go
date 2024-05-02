@@ -20,7 +20,6 @@ import (
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
 	"golang.org/x/tools/imports"
-	"k8s.io/gengo/args"
 )
 
 var (
@@ -320,7 +319,7 @@ func generateClient(outputDir string, schemas []*types.Schema) error {
 }
 
 func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage string, nsObjs []interface{}, objs []interface{}) error {
-	baseDir := args.DefaultSourceTree()
+	baseDir := defaultSourceTree()
 	k8sDir := path.Join(baseDir, k8sOutputPackage)
 
 	fakeDir := path.Join(k8sDir, "fakes")
@@ -381,7 +380,7 @@ func GenerateControllerForTypes(version *types.APIVersion, k8sOutputPackage stri
 }
 
 func GenerateClient(schemas *types.Schemas, privateTypes map[string]bool, outputDir, cattleOutputPackage string) error {
-	baseDir := args.DefaultSourceTree()
+	baseDir := defaultSourceTree()
 	cattleDir := path.Join(outputDir, cattleOutputPackage)
 
 	if err := prepareDirs(cattleDir); err != nil {
@@ -411,7 +410,7 @@ func GenerateClient(schemas *types.Schemas, privateTypes map[string]bool, output
 }
 
 func Generate(schemas *types.Schemas, privateTypes map[string]bool, basePackage, outputDir, cattleOutputPackage, k8sOutputPackage string) error {
-	baseDir := args.DefaultSourceTree()
+	baseDir := defaultSourceTree()
 	cattleDir := path.Join(outputDir, cattleOutputPackage)
 	k8sDir := path.Join(outputDir, k8sOutputPackage)
 
@@ -578,4 +577,15 @@ func generateFakes(k8sDir string, controllers []*types.Schema) error {
 		}
 	}
 	return nil
+}
+
+// From gengo/args, v1:
+// defaultSourceTree returns the /src directory of the first entry in $GOPATH.
+// If $GOPATH is empty, it returns "./". Useful as a default output location.
+func defaultSourceTree() string {
+	paths := strings.Split(os.Getenv("GOPATH"), string(filepath.ListSeparator))
+	if len(paths) > 0 && len(paths[0]) > 0 {
+		return filepath.Join(paths[0], "src")
+	}
+	return "./"
 }
