@@ -18,7 +18,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
-	k8s.io/gengo v0.0.0-20240310015720-9cff6334dab4
+	k8s.io/gengo v0.0.0-20240404160639-a0386bf69313
 )
 
 require (
