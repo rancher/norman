@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request: {}
+  push:
+    branches:
+    - master
+    - release/*
+
+jobs:
+  ci:
+    runs-on : ubuntu-latest
+    container:
+      image: rancher/dapper:v0.6.0
+    steps:
+    - name: Add Git
+      run: apk add -U git
+    - name: Checkout code
+      # https://github.com/actions/checkout/releases/tag/v4.1.1
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+    - name : Run dapper ci
+      run: dapper ci
