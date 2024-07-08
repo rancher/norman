@@ -9,8 +9,8 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/matryer/moq v0.3.4
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/lasso v0.0.0-20240430201833-6f3def65ffc5
-	github.com/rancher/wrangler/v3 v3.0.0-rc2
+	github.com/rancher/lasso v0.0.0-20240705194423-b2a060d103c1
+	github.com/rancher/wrangler/v3 v3.0.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sync v0.7.0
@@ -36,7 +36,7 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
