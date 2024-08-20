@@ -89,6 +89,7 @@ type {{.schema.CodeName}}Controller interface {
 
 type {{.schema.CodeName}}Interface interface {
     ObjectClient() *objectclient.ObjectClient
+	IsCached() bool
 	Create(*{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error)
 	GetNamespaced(namespace, name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
 	Get(name string, opts metav1.GetOptions) (*{{.prefix}}{{.schema.CodeName}}, error)
@@ -244,6 +245,10 @@ type {{.schema.ID}}Client struct {
 
 func (s *{{.schema.ID}}Client) ObjectClient() *objectclient.ObjectClient {
 	return s.objectClient
+}
+
+func (s *{{.schema.ID}}Client) IsCached() bool {
+	return s.client.controllerFactory.SharedCacheFactory().IsCached({{.schema.CodeName}}GroupVersionKind)
 }
 
 func (s *{{.schema.ID}}Client) Create(o *{{.prefix}}{{.schema.CodeName}}) (*{{.prefix}}{{.schema.CodeName}}, error) {
