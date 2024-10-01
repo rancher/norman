@@ -11,7 +11,7 @@ import (
 func Create(context *types.APIContext, version *types.APIVersion, typeName string, data map[string]interface{}, into interface{}) error {
 	schema := context.Schemas.Schema(version, typeName)
 	if schema == nil {
-		return fmt.Errorf("failed to find schema " + typeName)
+		return fmt.Errorf("failed to find schema %s", typeName)
 	}
 
 	item, err := schema.Store.Create(context, schema, data)
@@ -37,7 +37,7 @@ func Create(context *types.APIContext, version *types.APIVersion, typeName strin
 func ByID(context *types.APIContext, version *types.APIVersion, typeName string, id string, into interface{}) error {
 	schema := context.Schemas.Schema(version, typeName)
 	if schema == nil {
-		return fmt.Errorf("failed to find schema " + typeName)
+		return fmt.Errorf("failed to find schema %s", typeName)
 	}
 
 	item, err := schema.Store.ByID(context, schema, id)
@@ -63,7 +63,7 @@ func ByID(context *types.APIContext, version *types.APIVersion, typeName string,
 func List(context *types.APIContext, version *types.APIVersion, typeName string, opts *types.QueryOptions, into interface{}) error {
 	schema := context.Schemas.Schema(version, typeName)
 	if schema == nil {
-		return fmt.Errorf("failed to find schema " + typeName)
+		return fmt.Errorf("failed to find schema %s", typeName)
 	}
 
 	data, err := schema.Store.List(context, schema, opts)
