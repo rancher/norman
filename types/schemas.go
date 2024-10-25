@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -83,6 +84,10 @@ func (s *Schemas) doRemoveSchema(schema Schema) *Schemas {
 	if schema.Embed {
 		s.removeEmbed(&schema)
 	}
+
+	s.schemas = slices.DeleteFunc(s.schemas, func(candidate *Schema) bool {
+		return candidate.ID == schema.ID
+	})
 
 	return s
 }
