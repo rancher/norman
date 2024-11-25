@@ -141,11 +141,12 @@ func (s *Schemas) doAddSchema(schema Schema, replace bool) *Schemas {
 		schemas[schema.ID] = &schema
 
 		if replace {
-			for i, candidate := range s.schemas {
-				if candidate.ID == schema.ID {
-					s.schemas[i] = &schema
-					break
-				}
+			i := slices.IndexFunc(s.schemas, func(candidate *Schema) bool {
+				return candidate.ID == schema.ID
+			})
+
+			if i >= 0 {
+				s.schemas[i] = &schema
 			}
 		} else {
 			s.schemas = append(s.schemas, &schema)
