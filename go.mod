@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/matryer/moq v0.3.2
+	github.com/matryer/moq v0.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.0.0-20230830164424-d684fdeb6f29
 	github.com/rancher/wrangler v1.1.1-0.20230831050635-df1bd5aae9df
