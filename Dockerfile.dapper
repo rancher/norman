@@ -7,7 +7,7 @@ RUN zypper -n up && \
     zypper -n in git docker vim curl wget
 RUN rm -rf /go/src /go/pkg
 RUN if [ "${ARCH}" == "amd64" ]; then \
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.57.2; \
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.63.4; \
     fi
 
 ENV DAPPER_ENV REPO TAG DRONE_TAG
