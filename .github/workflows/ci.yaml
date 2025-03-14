@@ -11,7 +11,7 @@ jobs:
   ci:
     runs-on : ubuntu-latest
     container:
-      image: rancher/dapper:v0.6.0
+      image: rancher/dapper:v0.6.0@sha256:72aac90cc3d637bd1f4a6792406c35ba01033287eba255d59e08622ad41f6a5d
     steps:
     - name: Add Git
       run: apk add -U git
