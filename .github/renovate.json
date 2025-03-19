@@ -3,25 +3,32 @@
     "github>rancher/renovate-config#release"
   ],
   "baseBranches": [
-    "main", "release/v0.5", "release/v0.4", "release/v0.3", "release/v0.2"
+    "main",
+    "release/v0.5",
+    "release/v0.4",
+    "release/v0.3",
+    "release/v0.2"
   ],
   "prHourlyLimit": 2,
   "packageRules": [
     {
-      "matchPackagePatterns": [
-        "k8s.io/*",
-        "sigs.k8s.io/*",
-        "github.com/prometheus/*"
-      ],
-      "enabled": false
+      "enabled": false,
+      "matchPackageNames": [
+        "/k8s.io/*/",
+        "/sigs.k8s.io/*/",
+        "/github.com/prometheus/*/"
+      ]
     },
     {
-      "matchPackagePatterns": [
-        "github.com/rancher/lasso/*",
-        "github.com/rancher/wrangler/*"
+      "matchUpdateTypes": [
+        "major",
+        "minor"
       ],
-      "matchUpdateTypes": ["major", "minor"],
-      "enabled": false
+      "enabled": false,
+      "matchPackageNames": [
+        "/github.com/rancher/lasso/*/",
+        "/github.com/rancher/wrangler/*/"
+      ]
     }
-  ] 
+  ]
 }
