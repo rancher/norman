@@ -9,8 +9,8 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/matryer/moq v0.5.2
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/lasso v0.2.1
-	github.com/rancher/wrangler/v3 v3.2.0-rc.3
+	github.com/rancher/lasso v0.2.2
+	github.com/rancher/wrangler/v3 v3.2.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sync v0.13.0
