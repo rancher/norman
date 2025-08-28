@@ -12,7 +12,7 @@ require (
 	github.com/rancher/lasso v0.2.1
 	github.com/rancher/wrangler/v3 v3.2.0-rc.3
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.11.0
 	golang.org/x/text v0.22.0
 	golang.org/x/tools v0.30.0
