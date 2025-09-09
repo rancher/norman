@@ -49,7 +49,7 @@ func (g *genericController) EnqueueAfter(namespace, name string, after time.Dura
 }
 
 func (g *genericController) AddHandler(ctx context.Context, name string, handler HandlerFunc) {
-	g.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(func(key string, obj runtime.Object) (runtime.Object, error) {
+	g.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(func(_ context.Context, key string, obj runtime.Object) (runtime.Object, error) {
 		if !isNamespace(g.namespace, obj) {
 			return obj, nil
 		}
