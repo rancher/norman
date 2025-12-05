@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,11 +36,18 @@ func getEmbedded(ctx context.Context) (bool, clientcmd.ClientConfig, error) {
 }
 
 func k3sServer(ctx context.Context) (string, error) {
-	cmd := exec.Command("k3s", "server",
+	args := []string{
+		"server",
 		"--cluster-init",
 		"--disable=traefik,servicelb,metrics-server,local-storage",
 		"--node-name=local-node",
-		"--log=./k3s.log")
+		"--log=./k3s.log"}
+	for _, flag := range strings.Split(os.Getenv("K3S_FLAGS"), " ") {
+		if f := strings.TrimSpace(flag); "" != f {
+			args = append(args, f)
+		}
+	}
+	cmd := exec.Command("k3s", args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGKILL,
