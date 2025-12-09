@@ -1,8 +1,6 @@
 module github.com/rancher/norman
 
-go 1.23.0
-
-toolchain go1.23.6
+go 1.24.0
 
 require (
 	github.com/ghodss/yaml v1.0.0
@@ -13,7 +11,7 @@ require (
 	github.com/rancher/wrangler/v3 v3.1.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/sync v0.13.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/text v0.22.0
 	golang.org/x/tools v0.30.0
 	k8s.io/api v0.31.1
