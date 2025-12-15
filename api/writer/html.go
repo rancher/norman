@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	JSURL          = "https://releases.rancher.com/api-ui/%API_UI_VERSION%/ui.min.js"
-	CSSURL         = "https://releases.rancher.com/api-ui/%API_UI_VERSION%/ui.min.css"
+	JSURL          = "/api-ui/%API_UI_VERSION%/ui.min.js"
+	CSSURL         = "/api-ui/%API_UI_VERSION%/ui.min.css"
 	DefaultVersion = "1.1.11"
 )
 
