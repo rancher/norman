@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.2.3
 	github.com/rancher/wrangler/v3 v3.2.4
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sync v0.13.0
 	golang.org/x/text v0.24.0
