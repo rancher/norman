@@ -4,18 +4,23 @@ go 1.25.0
 
 toolchain go1.25.6
 
+replace (
+	github.com/rancher/lasso => github.com/vardhaman22/lasso v0.0.0-20260122051013-ec7973ce25d5
+	github.com/rancher/wrangler/v3 => github.com/vardhaman22/wrangler/v3 v3.0.0-20260122054951-342f63a20ab5
+)
+
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/matryer/moq v0.5.2
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/lasso v0.2.5-rc.1
+	github.com/rancher/lasso v0.2.5
 	github.com/rancher/wrangler/v3 v3.3.0-rc.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.18.0
 	golang.org/x/text v0.31.0
-	golang.org/x/tools v0.38.0
+	golang.org/x/tools v0.39.0
 	k8s.io/api v0.35.0
 	k8s.io/apiextensions-apiserver v0.35.0
 	k8s.io/apimachinery v0.35.0
@@ -50,7 +55,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
