@@ -3,10 +3,15 @@ package proxy
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/rancher/norman/authorization"
 	"github.com/rancher/norman/types"
 	"github.com/stretchr/testify/assert"
-	"io"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,9 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
-	"net/http"
-	"sync"
-	"testing"
 )
 
 func TestGetDeletionOptions(t *testing.T) {
@@ -197,4 +199,64 @@ func (m mockClientGetter) UnversionedClient(_ *types.APIContext, _ types.Storage
 
 func (m mockClientGetter) APIExtClient(_ *types.APIContext, _ types.StorageContext) (clientset.Interface, error) {
 	return nil, nil
+}
+
+func Test_shouldExpireAccessControl(t *testing.T) {
+	req := &types.APIContext{}
+	tests := []struct {
+		name         string
+		preFillCache func() // Optional setup function to put data in cache
+		inputCtx     *types.APIContext
+		want         bool
+	}{
+		{
+			name:         "First request (Cache Miss)",
+			preFillCache: nil, // Cache starts empty
+			inputCtx:     req,
+			want:         true, // Should return true and add to cache
+		},
+		{
+			name: "Second request (Cache Hit)",
+			preFillCache: func() {
+				// Manually add req to the global cache before running the function
+				lastExpiredRequests.Add(req, struct{}{}, 1*time.Minute)
+			},
+			inputCtx: req,
+			want:     false,
+		},
+		{
+			name: "Second request after expired (Cache Miss)",
+			preFillCache: func() {
+				// Manually add req to the global cache before running the function
+				lastExpiredRequests.Add(req, struct{}{}, 100*time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
+			},
+			inputCtx: req,
+			want:     true,
+		},
+		{
+			name: "Different request (Cache Miss)",
+			preFillCache: func() {
+				lastExpiredRequests.Add(req, struct{}{}, 1*time.Minute)
+			},
+			inputCtx: &types.APIContext{},
+			want:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				lastExpiredRequests.RemoveAll(func(any) bool {
+					return true
+				})
+			})
+			if tt.preFillCache != nil {
+				tt.preFillCache()
+			}
+
+			if got := shouldExpireAccessControl(tt.inputCtx); got != tt.want {
+				t.Errorf("shouldExpireAccessControl() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

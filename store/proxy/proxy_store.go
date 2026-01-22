@@ -4,6 +4,8 @@ import (
 	"context"
 	ejson "encoding/json"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime/serializer/streaming"
+	"k8s.io/apimachinery/pkg/util/cache"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	restclientwatch "k8s.io/client-go/rest/watch"
@@ -37,7 +40,23 @@ var (
 		userAuthHeader,
 		"Impersonate-Group",
 	}
+
+	// minAccessControlValidity is the minimum period during which the AccessControl data attached to a request must be considered valid.
+	// This avoids capping the number of forced expirations to only one every 2s (default)
+	// This can be configured via the environment variable "CATTLE_MIN_ACCESSCONTROL_VALIDITY_SECONDS" (values equal or lower than zero disables this mechanism).
+	minAccessControlValidityPeriod = 2 * time.Second
+
+	// lastExpiredRequests is a *types.APIContext => struct{} self-expiring cache, which temporarily stores the last requests that were expired
+	lastExpiredRequests = cache.NewLRUExpireCache(1000)
 )
+
+func init() {
+	if v := os.Getenv("CATTLE_MIN_ACCESSCONTROL_VALIDITY_SECONDS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			minAccessControlValidityPeriod = time.Duration(n) * time.Second
+		}
+	}
+}
 
 type ClientGetter interface {
 	UnversionedClient(apiContext *types.APIContext, context types.StorageContext) (rest.Interface, error)
@@ -284,6 +303,22 @@ func (s *Store) retryList(namespace string, apiContext *types.APIContext, result
 	return err
 }
 
+func shouldExpireAccessControl(apiContext *types.APIContext) bool {
+	// Allow disabling this mechanism, configuring zero or negative values
+	if minAccessControlValidityPeriod <= 0 {
+		return true
+	}
+
+	// Skip expirations if last occurrence happened closer than the configured period
+	// This uses a self-expiring cache, so it omits the results for already expired entries.
+	// By storing an empty value and relying on its own expiration mechanism, we avoid the redundancy of storing the time itself
+	if _, ok := lastExpiredRequests.Get(apiContext); ok {
+		return false
+	}
+	lastExpiredRequests.Add(apiContext, struct{}{}, minAccessControlValidityPeriod)
+	return true
+}
+
 func (s *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *types.QueryOptions) (chan map[string]interface{}, error) {
 	c, err := s.shareWatch(apiContext, schema, opt)
 	if err != nil {
@@ -291,7 +326,9 @@ func (s *Store) Watch(apiContext *types.APIContext, schema *types.Schema, opt *t
 	}
 
 	return convert.Chan(c, func(data map[string]interface{}) map[string]interface{} {
-		apiContext.ExpireAccessControl(schema)
+		if shouldExpireAccessControl(apiContext) {
+			apiContext.ExpireAccessControl(schema)
+		}
 		return apiContext.AccessControl.Filter(apiContext, schema, data, s.authContext)
 	}), nil
 }
