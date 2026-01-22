@@ -39,7 +39,7 @@ func (a *APIOperations) DoDelete(url string) error {
 	}
 	defer func() {
 		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}()
 
 	if resp.StatusCode >= 300 {
@@ -74,7 +74,9 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != 200 {
 		return NewAPIError(resp, url)
@@ -148,7 +150,9 @@ func (a *APIOperations) DoModify(method string, url string, createObj interface{
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode >= 300 {
 		return NewAPIError(resp, url)
@@ -355,7 +359,9 @@ func (a *APIOperations) doAction(
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode >= 300 {
 		return NewAPIError(resp, actionURL)
