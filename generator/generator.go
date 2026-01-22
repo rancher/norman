@@ -157,11 +157,13 @@ func generateType(outputDir string, schema *types.Schema, schemas *types.Schemas
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	typeTemplate, err := template.New("type.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(typeTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(typeTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
@@ -180,11 +182,13 @@ func generateLifecycle(external bool, outputDir string, schema *types.Schema, sc
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	typeTemplate, err := template.New("lifecycle.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(lifecycleTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(lifecycleTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
@@ -210,11 +214,13 @@ func generateController(external bool, outputDir string, schema *types.Schema, s
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	typeTemplate, err := template.New("controller.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(controllerTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(controllerTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
@@ -240,11 +246,13 @@ func generateScheme(external bool, outputDir string, version *types.APIVersion, 
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	typeTemplate, err := template.New("scheme.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(schemeTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(schemeTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
@@ -273,11 +281,13 @@ func generateK8sClient(external bool, outputDir string, version *types.APIVersio
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	typeTemplate, err := template.New("k8sClient.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(k8sClientTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(k8sClientTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
@@ -311,7 +321,9 @@ func generateClient(outputDir string, schemas []*types.Schema) error {
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	return template.Execute(output, map[string]interface{}{
 		"schemas": schemas,
@@ -538,7 +550,9 @@ func Gofmt(workDir, pkg string) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() {
+			_ = f.Close()
+		}()
 
 		_, err = f.Write(formatted)
 		return err

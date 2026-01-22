@@ -23,8 +23,6 @@ func APIRootFormatter(apiContext *types.APIContext, resource *types.RawResource)
 	for _, schema := range apiContext.Schemas.SchemasForVersion(apiVersion) {
 		addCollectionLink(apiContext, schema, resource.Links)
 	}
-
-	return
 }
 
 func addCollectionLink(apiContext *types.APIContext, schema *types.Schema, links map[string]string) {
