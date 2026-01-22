@@ -3,10 +3,14 @@ package proxy
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+	"sync"
+	"testing"
+
 	"github.com/rancher/norman/authorization"
 	"github.com/rancher/norman/types"
 	"github.com/stretchr/testify/assert"
-	"io"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,9 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
-	"net/http"
-	"sync"
-	"testing"
 )
 
 func TestGetDeletionOptions(t *testing.T) {
@@ -138,7 +139,7 @@ func TestList(t *testing.T) {
 		body.Items = nil
 		var fakeResponse bytes.Buffer
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
-		clientGetter.RESTClient.Resp = &http.Response{
+		clientGetter.Resp = &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&fakeResponse),
 		}
@@ -155,7 +156,7 @@ func TestList(t *testing.T) {
 		body := data
 		var fakeResponse bytes.Buffer
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
-		clientGetter.RESTClient.Resp = &http.Response{
+		clientGetter.Resp = &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&fakeResponse),
 		}
@@ -174,7 +175,7 @@ func TestList(t *testing.T) {
 		body := data
 		var fakeResponse bytes.Buffer
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
-		clientGetter.RESTClient.Resp = &http.Response{
+		clientGetter.Resp = &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&fakeResponse),
 		}

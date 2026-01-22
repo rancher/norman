@@ -247,7 +247,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 		return result, err
 	}
 	defer func(closer io.Closer) {
-		closer.Close()
+		_ = closer.Close()
 	}(resp.Body)
 
 	if resp.StatusCode != 200 {
@@ -275,7 +275,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			return result, err
 		}
 		defer func(closer io.Closer) {
-			closer.Close()
+			_ = closer.Close()
 		}(resp.Body)
 
 		if resp.StatusCode != 200 {
