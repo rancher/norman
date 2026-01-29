@@ -27,7 +27,7 @@ func getEmbedded(ctx context.Context) (bool, clientcmd.ClientConfig, error) {
 		return false, nil, err
 	}
 
-	os.Setenv("KUBECONFIG", kubeConfig)
+	_ = os.Setenv("KUBECONFIG", kubeConfig)
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfig}, &clientcmd.ConfigOverrides{})
 
