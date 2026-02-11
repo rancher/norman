@@ -12,5 +12,5 @@ fi
 
 echo Running: golangci-lint
 export "GOROOT=$(go env GOROOT)"
-golangci-lint run --fast --timeout=5m
+golangci-lint run --timeout=5m
 
