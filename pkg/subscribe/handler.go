@@ -63,7 +63,9 @@ func handler(apiContext *types.APIContext) error {
 	if err != nil {
 		return err
 	}
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	cancelCtx, cancel := context.WithCancel(apiContext.Request.Context())
 	readerGroup, ctx := errgroup.WithContext(cancelCtx)
@@ -73,7 +75,7 @@ func handler(apiContext *types.APIContext) error {
 		for {
 			if _, _, err := c.NextReader(); err != nil {
 				cancel()
-				c.Close()
+				_ = c.Close()
 				break
 			}
 		}
