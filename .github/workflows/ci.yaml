@@ -10,13 +10,15 @@ on:
 jobs:
   ci:
     runs-on : ubuntu-latest
-    container:
-      image: rancher/dapper:v0.6.0
+
     steps:
-    - name: Add Git
-      run: apk add -U git
+
+    - name: Install golangci-lint
+      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.64.8;
+
     - name: Checkout code
       # https://github.com/actions/checkout/releases/tag/v4.1.1
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    
     - name : Run dapper ci
-      run: dapper ci
+      run: scripts/ci
