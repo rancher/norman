@@ -10,8 +10,7 @@ on:
 jobs:
   ci:
     runs-on : ubuntu-latest
-    container:
-      image: rancher/dapper:v0.6.0
+
     steps:
 
     - name: Add Git
