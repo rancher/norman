@@ -1,6 +1,6 @@
 module github.com/rancher/norman
 
-go 1.24.0
+go 1.25.0
 
 replace (
 	github.com/google/cel-go => github.com/google/cel-go v0.22.0
@@ -58,7 +58,7 @@ require (
 	github.com/rancher/wrangler/v3 v3.2.4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/sync v0.12.0
+	golang.org/x/sync v0.20.0
 	golang.org/x/text v0.23.0
 	golang.org/x/tools v0.30.0
 	k8s.io/api v0.33.1
