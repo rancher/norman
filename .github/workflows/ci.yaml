@@ -9,14 +9,18 @@ on:
 
 jobs:
   ci:
-    runs-on : ubuntu-latest
-    container:
-      image: rancher/dapper:v0.6.0
+    runs-on: ubuntu-latest
     steps:
-    - name: Add Git
-      run: apk add -U git
     - name: Checkout code
-      # https://github.com/actions/checkout/releases/tag/v4.1.1
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-    - name : Run dapper ci
-      run: dapper ci
+      uses: actions/checkout@v4
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25'
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+      with:
+        version: v1.64.8
+        install-mode: goinstall
+    - name: Run CI
+      run: make build test
