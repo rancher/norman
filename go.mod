@@ -1,13 +1,11 @@
 module github.com/rancher/norman
 
-go 1.25.0
-
-toolchain go1.25.6
+go 1.26
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/matryer/moq v0.5.2
+	github.com/matryer/moq v0.7.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.2.7
 	github.com/rancher/wrangler/v3 v3.4.0
