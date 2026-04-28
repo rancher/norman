@@ -1,22 +1,118 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. v0.5.1)'
+        required: true
+        type: string
+
+permissions: {}
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Validate version format
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Version '$VERSION' must match v<major>.<minor>.<patch>[-prerelease]"
+            exit 1
+          fi
+
+      - name: Resolve allowed minor from VERSION.md
+        id: minor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          table=$(gh api "repos/$GITHUB_REPOSITORY/contents/VERSION.md" --jq .content | base64 -d)
+          allowed=$(grep -F "| $GITHUB_REF_NAME |" <<< "$table" | cut -d'|' -f3 | tr -d ' ')
+          if [ -z "$allowed" ]; then
+            echo "::error::Branch '$GITHUB_REF_NAME' not found in default-branch VERSION.md"
+            exit 1
+          fi
+          echo "Branch '$GITHUB_REF_NAME' is allowed minor '$allowed'"
+          echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+
+      - name: Validate version matches branch's allowed minor
+        env:
+          VERSION: ${{ inputs.version }}
+          ALLOWED: ${{ steps.minor.outputs.allowed }}
+        run: |
+          if [[ "$VERSION" != "${ALLOWED}."* ]]; then
+            echo "::error::Version $VERSION does not belong to branch $GITHUB_REF_NAME (allowed minor: $ALLOWED)"
+            exit 1
+          fi
+
+      - name: Validate version is next-sequential
+        env:
+          VERSION: ${{ inputs.version }}
+          ALLOWED: ${{ steps.minor.outputs.allowed }}
+        run: |
+          v_core="${VERSION%%-*}"
+          latest=$(git tag -l "${ALLOWED}.*" | grep -v -- '-' | sort -V | tail -n1 || true)
+          if [ -z "$latest" ]; then
+            if [ "$v_core" != "${ALLOWED}.0" ]; then
+              echo "::error::No prior ${ALLOWED} tags; first version must be ${ALLOWED}.0 (got $v_core)"
+              exit 1
+            fi
+            echo "First release on ${ALLOWED} line: OK"
+          else
+            patch="${latest##*.}"
+            expected="${ALLOWED}.$((patch + 1))"
+            if [ "$v_core" != "$expected" ]; then
+              echo "::error::Latest ${ALLOWED} tag is $latest; next must be $expected (got $v_core)"
+              exit 1
+            fi
+            echo "Next sequential after $latest: OK"
+          fi
+
+      - name: Validate tag does not already exist
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag '$VERSION' already exists"
+            exit 1
+          fi
+
   release:
+    needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-    - name : Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - name: Create release on Github
-      run: |
-        gh --repo "${{ github.repository }}" release create ${{ github.ref_name }} --verify-tag --generate-notes
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure git identity
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
+      - name: Create and push tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh --repo "$GITHUB_REPOSITORY" release create "$VERSION" \
+            --verify-tag --generate-notes
