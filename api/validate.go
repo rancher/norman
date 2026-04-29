@@ -60,10 +60,11 @@ func CheckCSRF(apiContext *types.APIContext) error {
 		}
 
 		cookie = &http.Cookie{
-			Name:   csrfCookie,
-			Value:  hex.EncodeToString(bytes),
-			Path:   "/",
-			Secure: true,
+			Name:     csrfCookie,
+			Value:    hex.EncodeToString(bytes),
+			Path:     "/",
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
 		}
 
 		http.SetCookie(apiContext.Response, cookie)
