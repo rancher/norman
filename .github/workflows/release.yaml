@@ -62,7 +62,7 @@ jobs:
           ALLOWED: ${{ steps.minor.outputs.allowed }}
         run: |
           v_core="${VERSION%%-*}"
-          latest=$(git tag -l "${ALLOWED}.*" | grep -v -- '-' | sort -V | tail -n1 || true)
+          latest=$(git tag -l "${ALLOWED}.*" | grep -v -- '-' | sort --version-sort | tail -n1 || true)
           if [ -z "$latest" ]; then
             if [ "$v_core" != "${ALLOWED}.0" ]; then
               echo "::error::No prior ${ALLOWED} tags; first version must be ${ALLOWED}.0 (got $v_core)"
