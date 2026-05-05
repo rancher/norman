@@ -27,7 +27,7 @@ func TestServeHTMLEscaping(t *testing.T) {
 
 	var escapedBadChars strings.Builder
 	for _, r := range badChars {
-		escapedBadChars.WriteString(fmt.Sprintf("&#x%X;", r))
+		fmt.Fprintf(&escapedBadChars, "&#x%X;", r)
 	}
 
 	t.Parallel()
