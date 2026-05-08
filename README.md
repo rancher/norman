@@ -21,3 +21,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+# Releasing
+
+Releases are cut by triggering the [Cut release workflow](.github/workflows/cut-release.yaml)
+from the GitHub Actions tab. Select this release branch and provide the version
+(e.g. `v0.4.1`) as input. The workflow validates the version against `VERSION.md`
+on the default branch, creates the annotated tag, and dispatches the
+[On release workflow](.github/workflows/release.yaml) on the new tag, which creates
+the GitHub release.
