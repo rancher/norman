@@ -59,11 +59,14 @@ func CheckCSRF(apiContext *types.APIContext) error {
 			return httperror.WrapAPIError(err, httperror.ServerError, "Failed in CSRF processing")
 		}
 
+		// SameSite=Lax (not Strict) so top-level cross-origin
+		// navigations (bookmarks, external links) still send the cookie.
 		cookie = &http.Cookie{
-			Name:   csrfCookie,
-			Value:  hex.EncodeToString(bytes),
-			Path:   "/",
-			Secure: true,
+			Name:     csrfCookie,
+			Value:    hex.EncodeToString(bytes),
+			Path:     "/",
+			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
 		}
 
 		http.SetCookie(apiContext.Response, cookie)
