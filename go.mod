@@ -13,7 +13,7 @@ require (
 	github.com/rancher/wrangler/v3 v3.7.0-rc.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.21.0
 	golang.org/x/text v0.37.0
 	golang.org/x/tools v0.45.0
 	k8s.io/api v0.36.0
