@@ -5,7 +5,7 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/ghodss/yaml"
+	"sigs.k8s.io/yaml"
 )
 
 var (
