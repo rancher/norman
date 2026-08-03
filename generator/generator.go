@@ -16,7 +16,6 @@ import (
 	"text/template"
 
 	"github.com/matryer/moq/pkg/moq"
-	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
 	"golang.org/x/tools/imports"
@@ -517,7 +516,7 @@ func prepareDirs(dirs ...string) error {
 		for _, file := range files {
 			if strings.HasPrefix(file.Name(), "zz_generated") {
 				if err := os.Remove(path.Join(dir, file.Name())); err != nil {
-					return errors.Wrapf(err, "failed to delete %s", path.Join(dir, file.Name()))
+					return fmt.Errorf("failed to delete %s: %w", path.Join(dir, file.Name()), err)
 				}
 			}
 		}

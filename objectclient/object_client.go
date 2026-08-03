@@ -2,8 +2,8 @@ package objectclient
 
 import (
 	"context"
+	"errors"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/lasso/pkg/client"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
