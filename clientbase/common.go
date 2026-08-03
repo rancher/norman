@@ -84,9 +84,33 @@ func (e *APIError) Error() string {
 }
 
 // IsNotFound returns true if the error is an APIError with a 404 status code.
+//
+// It supports wrapped errors and returns false when the error is nil.
 func IsNotFound(err error) bool {
 	if apiError, ok := errors.AsType[*APIError](err); ok {
 		return apiError.StatusCode == http.StatusNotFound
+	}
+
+	return false
+}
+
+// IsUnauthorized returns true if the error is an APIError with a 401 status code.
+//
+// It supports wrapped errors and returns false when the error is nil.
+func IsUnauthorized(err error) bool {
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.StatusCode == http.StatusUnauthorized
+	}
+
+	return false
+}
+
+// IsForbidden returns true if the error is an APIError with a 403 status code.
+//
+// It supports wrapped errors and returns false when the error is nil.
+func IsForbidden(err error) bool {
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.StatusCode == http.StatusForbidden
 	}
 
 	return false
