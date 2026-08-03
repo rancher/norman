@@ -131,16 +131,6 @@ func NewAPIError(resp *http.Response, url string) *APIError {
 	}
 }
 
-func contains(array []string, item string) bool {
-	for _, check := range array {
-		if check == item {
-			return true
-		}
-	}
-
-	return false
-}
-
 func appendFilters(urlString string, filters map[string]interface{}) (string, error) {
 	if len(filters) == 0 {
 		return urlString, nil
