@@ -3,14 +3,15 @@ package clientbase
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 )
 
@@ -92,7 +93,7 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 	}
 
 	if err := json.Unmarshal(byteContent, respObject); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Failed to parse: %s", byteContent))
+		return fmt.Errorf("failed to parse: %s: %w", byteContent, err)
 	}
 
 	return nil
@@ -104,7 +105,7 @@ func (a *APIOperations) DoList(schemaType string, opts *types.ListOpts, respObje
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.CollectionMethods, "GET") {
+	if !slices.Contains(schema.CollectionMethods, "GET") {
 		return errors.New("Resource type [" + schemaType + "] is not listable")
 	}
 
@@ -185,7 +186,7 @@ func (a *APIOperations) DoCreate(schemaType string, createObj interface{}, respO
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.CollectionMethods, "POST") {
+	if !slices.Contains(schema.CollectionMethods, "POST") {
 		return errors.New("Resource type [" + schemaType + "] is not creatable")
 	}
 
@@ -243,7 +244,7 @@ func (a *APIOperations) doUpdate(schemaType string, replace bool, existing *type
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.ResourceMethods, "PUT") {
+	if !slices.Contains(schema.ResourceMethods, "PUT") {
 		return errors.New("Resource type [" + schemaType + "] is not updatable")
 	}
 
@@ -256,7 +257,7 @@ func (a *APIOperations) DoByID(schemaType string, id string, respObject interfac
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.ResourceMethods, "GET") {
+	if !slices.Contains(schema.ResourceMethods, "GET") {
 		return errors.New("Resource type [" + schemaType + "] can not be looked up by ID")
 	}
 
@@ -274,7 +275,7 @@ func (a *APIOperations) DoResourceDelete(schemaType string, existing *types.Reso
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	if !contains(schema.ResourceMethods, "DELETE") {
+	if !slices.Contains(schema.ResourceMethods, "DELETE") {
 		return errors.New("Resource type [" + schemaType + "] can not be deleted")
 	}
 

@@ -1,11 +1,11 @@
 package condition
 
 import (
+	"errors"
 	"reflect"
 	"regexp"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/objectclient"
 	v1 "k8s.io/api/core/v1"

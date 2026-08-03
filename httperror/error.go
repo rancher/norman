@@ -1,7 +1,9 @@
 package httperror
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 )
 
 var (
@@ -105,9 +107,10 @@ func IsAPIError(err error) bool {
 	return ok
 }
 
+// IsNotFound returns true if the error is an APIError with a 404 status code.
 func IsNotFound(err error) bool {
-	if apiError, ok := err.(*APIError); ok {
-		return apiError.Code.Status == 404
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.Code.Status == http.StatusNotFound
 	}
 
 	return false

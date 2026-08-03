@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 )
 
@@ -83,13 +83,37 @@ func (e *APIError) Error() string {
 	return e.Msg
 }
 
+// IsNotFound returns true if the error is an APIError with a 404 status code.
+//
+// It supports wrapped errors and returns false when the error is nil.
 func IsNotFound(err error) bool {
-	apiError, ok := err.(*APIError)
-	if !ok {
-		return false
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.StatusCode == http.StatusNotFound
 	}
 
-	return apiError.StatusCode == http.StatusNotFound
+	return false
+}
+
+// IsUnauthorized returns true if the error is an APIError with a 401 status code.
+//
+// It supports wrapped errors and returns false when the error is nil.
+func IsUnauthorized(err error) bool {
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.StatusCode == http.StatusUnauthorized
+	}
+
+	return false
+}
+
+// IsForbidden returns true if the error is an APIError with a 403 status code.
+//
+// It supports wrapped errors and returns false when the error is nil.
+func IsForbidden(err error) bool {
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.StatusCode == http.StatusForbidden
+	}
+
+	return false
 }
 
 func NewAPIError(resp *http.Response, url string) *APIError {
@@ -129,16 +153,6 @@ func NewAPIError(resp *http.Response, url string) *APIError {
 		Status:     resp.Status,
 		Body:       body,
 	}
-}
-
-func contains(array []string, item string) bool {
-	for _, check := range array {
-		if check == item {
-			return true
-		}
-	}
-
-	return false
 }
 
 func appendFilters(urlString string, filters map[string]interface{}) (string, error) {
