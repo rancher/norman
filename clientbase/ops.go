@@ -3,6 +3,7 @@ package clientbase
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"regexp"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 )
 
@@ -92,7 +92,7 @@ func (a *APIOperations) DoGet(url string, opts *types.ListOpts, respObject inter
 	}
 
 	if err := json.Unmarshal(byteContent, respObject); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Failed to parse: %s", byteContent))
+		return fmt.Errorf("failed to parse: %s: %w", byteContent, err)
 	}
 
 	return nil

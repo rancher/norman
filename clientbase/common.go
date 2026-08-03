@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"github.com/rancher/norman/types"
 )
 
@@ -83,13 +83,13 @@ func (e *APIError) Error() string {
 	return e.Msg
 }
 
+// IsNotFound returns true if the error is an APIError with a 404 status code.
 func IsNotFound(err error) bool {
-	apiError, ok := err.(*APIError)
-	if !ok {
-		return false
+	if apiError, ok := errors.AsType[*APIError](err); ok {
+		return apiError.StatusCode == http.StatusNotFound
 	}
 
-	return apiError.StatusCode == http.StatusNotFound
+	return false
 }
 
 func NewAPIError(resp *http.Response, url string) *APIError {
