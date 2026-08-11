@@ -19,6 +19,30 @@
   ],
   "packageRules": [
     {
+      "matchBaseBranches": ["main"],
+      "extends": ["github>rancher/renovate-config:rancher-main#main"]
+    },
+    {
+      "matchBaseBranches": ["release/v0.9"],
+      "extends": ["github>rancher/renovate-config:rancher-2.15#main"]
+    },
+    {
+      "matchBaseBranches": ["release/v0.8"],
+      "extends": ["github>rancher/renovate-config:rancher-2.14#main"]
+    },
+    {
+      "matchBaseBranches": ["release/v0.7"],
+      "extends": ["github>rancher/renovate-config:rancher-2.13#main"]
+    },
+    {
+      "matchBaseBranches": ["release/v0.6"],
+      "extends": ["github>rancher/renovate-config:rancher-2.12#main"]
+    },
+    {
+      "matchBaseBranches": ["release/v0.5"],
+      "extends": ["github>rancher/renovate-config:rancher-2.11#main"]
+    },
+    {
       "enabled": false,
       "matchPackageNames": [
         "/k8s.io/*/",
