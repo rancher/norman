@@ -10,7 +10,7 @@ require (
 	github.com/matryer/moq v0.5.2
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.2.9
-	github.com/rancher/wrangler/v3 v3.7.1-rc.2
+	github.com/rancher/wrangler/v3 v3.7.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.22.0
