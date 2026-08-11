@@ -88,13 +88,6 @@
       "separateMajorMinor": false
     },
     {
-      "description": "Group golang.org/x/* packages into a single PR per branch",
-      "matchPackageNames": [
-        "/^golang\\.org\\/x\\//"
-      ],
-      "groupName": "golang.org/x packages"
-    },
-    {
       "description": "Do not bump golang.org/x/* minor/major on release branches - these packages track Go language releases and bumping them forces a go directive minor bump",
       "matchManagers": ["gomod"],
       "matchPackageNames": ["/^golang\\.org\\/x\\//"],
