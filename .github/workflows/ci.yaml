@@ -18,9 +18,9 @@ jobs:
       with:
         go-version: '1.26'
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
       with:
-        version: v1.64.8
+        version: v2.13.1
         install-mode: goinstall
     - name: Run CI
       run: make build test
