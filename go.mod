@@ -1,6 +1,6 @@
 module github.com/rancher/norman
 
-go 1.24.0
+go 1.25.0
 
 replace (
 	github.com/google/cel-go => github.com/google/cel-go v0.29.0
@@ -99,7 +99,7 @@ require (
 	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
