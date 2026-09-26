@@ -1,8 +1,8 @@
 module github.com/rancher/norman
 
-go 1.25.0
+go 1.26.0
 
-toolchain go1.25.14
+toolchain go1.26.8
 
 require (
 	github.com/ghodss/yaml v1.0.0
