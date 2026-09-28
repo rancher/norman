@@ -24,23 +24,23 @@
     },
     {
       "matchBaseBranches": ["release/v0.9"],
-      "extends": ["github>rancher/renovate-config:rancher-2.15#main"]
+      "extends": ["github>rancher/renovate-config:rancher-2.15#release"]
     },
     {
       "matchBaseBranches": ["release/v0.8"],
-      "extends": ["github>rancher/renovate-config:rancher-2.14#main"]
+      "extends": ["github>rancher/renovate-config:rancher-2.14#release"]
     },
     {
       "matchBaseBranches": ["release/v0.7"],
-      "extends": ["github>rancher/renovate-config:rancher-2.13#main"]
+      "extends": ["github>rancher/renovate-config:rancher-2.13#release"]
     },
     {
       "matchBaseBranches": ["release/v0.6"],
-      "extends": ["github>rancher/renovate-config:rancher-2.12#main"]
+      "extends": ["github>rancher/renovate-config:rancher-2.12#release"]
     },
     {
       "matchBaseBranches": ["release/v0.5"],
-      "extends": ["github>rancher/renovate-config:rancher-2.11#main"]
+      "extends": ["github>rancher/renovate-config:rancher-2.11#release"]
     },
     {
       "enabled": false,
