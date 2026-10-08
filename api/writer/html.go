@@ -12,7 +12,7 @@ import (
 const (
 	JSURL          = "/api-ui/%API_UI_VERSION%/ui.min.js"
 	CSSURL         = "/api-ui/%API_UI_VERSION%/ui.min.css"
-	DefaultVersion = "1.1.11"
+	DefaultVersion = "1.2.0"
 )
 
 var (
