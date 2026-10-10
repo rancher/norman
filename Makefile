@@ -11,7 +11,7 @@ endif
 # Export ARCH so it's available to subshells
 export ARCH
 
-GOLANGCI_LINT_VERSION := v1.64.8
+GOLANGCI_LINT_VERSION := v2.9.0
 BIN_DIR := $(shell pwd)/bin
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
