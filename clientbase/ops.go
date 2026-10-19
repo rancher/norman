@@ -207,7 +207,7 @@ func (a *APIOperations) DoUpdate(schemaType string, existing *types.Resource, up
 
 func (a *APIOperations) doUpdate(schemaType string, replace bool, existing *types.Resource, updates interface{}, respObject interface{}) error {
 	if existing == nil {
-		return errors.New("Existing object is nil")
+		return errors.New("existing object is nil")
 	}
 
 	selfURL, ok := existing.Links[SELF]
@@ -286,7 +286,7 @@ func (a *APIOperations) DoAction(schemaType string, action string,
 	existing *types.Resource, inputObject, respObject interface{}) error {
 
 	if existing == nil {
-		return errors.New("Existing object is nil")
+		return errors.New("existing object is nil")
 	}
 
 	actionURL, ok := existing.Actions[action]
@@ -301,7 +301,7 @@ func (a *APIOperations) DoCollectionAction(schemaType string, action string,
 	existing *types.Collection, inputObject, respObject interface{}) error {
 
 	if existing == nil {
-		return errors.New("Existing object is nil")
+		return errors.New("existing object is nil")
 	}
 
 	actionURL, ok := existing.Actions[action]
