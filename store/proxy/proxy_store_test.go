@@ -138,7 +138,7 @@ func TestList(t *testing.T) {
 		body.Items = nil
 		var fakeResponse bytes.Buffer
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
-		clientGetter.RESTClient.Resp = &http.Response{
+		clientGetter.Resp = &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&fakeResponse),
 		}
@@ -155,7 +155,7 @@ func TestList(t *testing.T) {
 		body := data
 		var fakeResponse bytes.Buffer
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
-		clientGetter.RESTClient.Resp = &http.Response{
+		clientGetter.Resp = &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&fakeResponse),
 		}
@@ -174,7 +174,7 @@ func TestList(t *testing.T) {
 		body := data
 		var fakeResponse bytes.Buffer
 		_ = json.NewEncoder(&fakeResponse).Encode(body)
-		clientGetter.RESTClient.Resp = &http.Response{
+		clientGetter.Resp = &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&fakeResponse),
 		}
