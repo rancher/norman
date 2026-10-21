@@ -244,7 +244,7 @@ func generateScheme(external bool, outputDir string, version *types.APIVersion, 
 
 	typeTemplate, err := template.New("scheme.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(schemeTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(schemeTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func generateK8sClient(external bool, outputDir string, version *types.APIVersio
 
 	typeTemplate, err := template.New("k8sClient.template").
 		Funcs(funcs()).
-		Parse(strings.Replace(k8sClientTemplate, "%BACK%", "`", -1))
+		Parse(strings.ReplaceAll(k8sClientTemplate, "%BACK%", "`"))
 	if err != nil {
 		return err
 	}
