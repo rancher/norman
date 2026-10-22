@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/matryer/moq v0.7.1
+	github.com/matryer/moq v0.8.1
 	github.com/rancher/lasso v0.2.10
 	github.com/rancher/wrangler/v3 v3.8.0-rc.1
 	github.com/sirupsen/logrus v1.10.2
