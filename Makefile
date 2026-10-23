@@ -11,7 +11,7 @@ endif
 # Export ARCH so it's available to subshells
 export ARCH
 
-GOLANGCI_LINT_VERSION := v1.64.8
+GOLANGCI_LINT_VERSION := v2.9.0
 BIN_DIR := $(shell pwd)/bin
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
@@ -38,7 +38,7 @@ test:
 $(GOLANGCI_LINT):
 	@echo "--- Installing golangci-lint $(GOLANGCI_LINT_VERSION) ---"
 	@mkdir -p $(BIN_DIR)
-	@GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 validate: $(GOLANGCI_LINT)
 	@echo "--- Validating ---"
