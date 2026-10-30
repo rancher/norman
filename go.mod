@@ -1,6 +1,6 @@
 module github.com/rancher/norman
 
-go 1.26.0
+go 1.26.10
 
 replace (
 	github.com/google/cel-go => github.com/google/cel-go v0.30.0
