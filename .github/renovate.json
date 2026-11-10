@@ -1,14 +1,12 @@
 {
-  "extends": [
-    "github>rancher/renovate-config#release"
-  ],
+  "extends": ["github>rancher/renovate-config//default#release"],
   "baseBranchPatterns": [
     "main",
     "release/v0.10",
     "release/v0.9",
     "release/v0.8",
     "release/v0.7",
-    "release/v0.6",
+    "release/v0.6"
   ],
   "prHourlyLimit": 2,
   "recreateWhen": "never",
