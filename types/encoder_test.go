@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func TestJSONToYAML(t *testing.T) {
@@ -82,7 +82,7 @@ func TestJSONToYAML(t *testing.T) {
 
 func TestJSONToYAMLInvalidInput(t *testing.T) {
 	_, err := jsonToYAML([]byte(`{bad`))
-	assert.ErrorContains(t, err, "yaml: line 1: did not find expected")
+	assert.ErrorContains(t, err, "did not find expected")
 }
 
 type errWriter struct{}
